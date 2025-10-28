@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <title>Equipment Checkout System Setup</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f4f7fc;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      width: 90%;
+      max-width: 80vw;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      color: #4a90e2;
+      margin-bottom: 20px;
+      font-family: 'Roboto', sans-serif;
+    }
+
+    p {
+      font-size: 1.2em;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .tutorial {
+      background-color: #e9f3ff;
+      border-left: 5px solid #4a90e2;
+      padding: 15px 20px;
+      margin-bottom: 25px;
+      text-align: left;
+      font-size: 1em;
+      border-radius: 5px;
+    }
+
+    .tutorial a {
+      color: #4a90e2;
+      text-decoration: none;
+    }
+
+    .tutorial a:hover {
+      text-decoration: underline;
+    }
+
+    input {
+      padding: 10px;
+      width: 80%;
+      margin: 10px 0;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+      font-size: 1em;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #4a90e2;
+    }
+
+    button {
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1.2em;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #357ab7;
+    }
+
+    #loader-icon {
+      margin-top: 20px;
+      animation: spin 1.5s infinite linear;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Welcome to the Camera Inventory System</h1>
+
+    <div class="tutorial">
+      <strong>Setup Instructions:</strong>
+      <ol>
+        <li>
+          <strong>Make a copy of the inventory spreadsheet template:</strong><br>
+          👉 <a href="https://docs.google.com/spreadsheets/d/1_N_s4pTp-O2M5lZtUWNwDKYLuC0JghO8ryt97Pk5Juk/copy" target="_blank">
+          Click here to open the template</a>, then click <em>"Make a copy"</em>.
+        </li>
+        <li>
+          Once your copy opens, copy the URL from the browser address bar.
+        </li>
+        <li>
+          Paste that copied URL into the box below and click "Submit".
+        </li>
+        <li>
+          For full instructions, see our manual:<br>
+          📘 <a href="https://docs.google.com/document/d/1JNXW4K7wZ9yyQPC1Z2jdrcEz_dyRexY8xHxE1vbAQls/edit?usp=sharing" target="_blank">
+          View Setup Manual</a>
+        </li>
+      </ol>
+    </div>
+
+    <p>Please enter the URL to your inventory spreadsheet</p>
+    <input id="spreadsheetURLInput" type="url" placeholder="Enter spreadsheet URL" />
+    <button id="submitButton" onclick="submitURL()">Submit</button>
+
+<img id="loader-icon" style="display: none;" alt="Loading icon" width="64px" height="64px" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48c3R5bGU+LnNwaW5uZXJfRHVwVXthbmltYXRpb246c3Bpbm5lcl9zTTNEIDEuMnMgaW5maW5pdGV9LnNwaW5uZXJfR1d0WnthbmltYXRpb24tZGVsYXk6LjFzfS5zcGlubmVyX2R3TjZ7YW5pbWF0aW9uLWRlbGF5Oi4yc30uc3Bpbm5lcl80NlFQe2FuaW1hdGlvbi1kZWxheTouM3N9LnNwaW5uZXJfUEQ4MnthbmltYXRpb24tZGVsYXk6LjRzfS5zcGlubmVyX2VVZ2h7YW5pbWF0aW9uLWRlbGF5Oi41c30uc3Bpbm5lcl9lVWFQe2FuaW1hdGlvbi1kZWxheTouNnN9LnNwaW5uZXJfajM4SHthbmltYXRpb24tZGVsYXk6LjdzfS5zcGlubmVyX3RWbVh7YW5pbWF0aW9uLWRlbGF5Oi44c30uc3Bpbm5lcl9EUWhYe2FuaW1hdGlvbi1kZWxheTouOXN9LnNwaW5uZXJfR0lMNHthbmltYXRpb24tZGVsYXk6MXN9LnNwaW5uZXJfbjBZYnthbmltYXRpb24tZGVsYXk6MS4xc31Aa2V5ZnJhbWVzIHNwaW5uZXJfc00zRHswJSw1MCV7YW5pbWF0aW9uLXRpbWluZy1mdW5jdGlvbjpjdWJpYy1iZXppZXIoMCwxLDAsMSk7cjowfTEwJXthbmltYXRpb24tdGltaW5nLWZ1bmN0aW9uOmN1YmljLWJlemllciguNTMsMCwuNjEsLjczKTtyOjJweH19PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzcGlubmVyX0R1cFUiIGN4PSIxMiIgY3k9IjMiIHI9IjAiLz48Y2lyY2xlIGNsYXNzPSJzcGlubmVyX0R1cFUgc3Bpbm5lcl9HV3RaIiBjeD0iMTYuNTAiIGN5PSI0LjIxIiByPSIwIi8+PGnpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfbjBZYiIgY3g9IjcuNTAiIGN5PSI0LjIxIiByPSIwIi8+PGnpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfZHdONiIgY3g9IjE5Ljc5IiBjeT0iNy41MCIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyX0dJTDQiIGN4PSI0LjIxIiBjeT0iNy41MCIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyX2VVZ2giIGN4PSIxNi41MCIgY3k9IjE5Ljc5IiByPSIwIi8+PGnpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfajM4SCIgY3g9IjcuNTAiIGN5PSIxOS43OSIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyX2VVYVAiIGN4PSIxMiIgY3k9IjIxIiByPSIwIi8+PC9zdmc+">
+    </img>
+  </div>
+
+  <script>
+    function submitURL() {
+      document.getElementById("loader-icon").style.display = "block";
+      let url = document.getElementById("spreadsheetURLInput").value;
+      console.log(url);
+      if (url.includes("?")) {
+        url = url.split("?")[0];
+      }
+      console.log(url);
+      if (!url.includes("docs.google.com/spreadsheets")) {
+        alert("You didn't enter the correct url. You have to enter the URL to the inventory spreadsheet you just copied. It should look like 'https://docs.google.com/spreadsheets/...'. See the instructions above.");
+      } else {
+        google.script.run.withSuccessHandler((data) => {
+          document.getElementById("loader-icon").style.display = "none";
+          if (data == "success") {
+            alert("Success, please reload the page to access the inventory system");
+            document.body.innerHTML = "<h1>Success, please reload the page to access the inventory system</h1>";
+          } else {
+            alert("Failure, the server responded with '" + data + "'");
+          }
+        }).setInventoryURL(url);
+      }
+      document.getElementById("loader-icon").style.display = "none";
+    }
+
+    let input = document.getElementById("spreadsheetURLInput");
+    input.addEventListener("keypress", function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        document.getElementById("submitButton").click();
+      }
+    });
+  </script>
+</body>
+
+</html>
