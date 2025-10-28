@@ -8,3 +8,12 @@ Try here: <a href="https://script.google.com/macros/s/AKfycbzVuh8pVw2QUAqFs71yue
 
 # Note:
 The Equipment Checkout System only works to an example email.
+
+# 📚 Libraries Used
+1. **Tailwind CSS**
+2. **Flowbite**
+3. **JsBarcode**
+4. **Google Fonts (Inter)**
+5. **jQuery**
+6. **Bootstrap**
+7. **SheetJS (xlsx)**
