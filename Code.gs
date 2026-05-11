@@ -231,10 +231,12 @@ function addStudentsToDatabase(students) {
   let error = "";
 
   students.forEach((student) => {
+
     if (currentStudents.includes(student.id)) {
       error = "Error: Student ID '" + student.id + "' already exists in the database";
 
     }
+    student.name = student.name.replaceAll("\"", "");
     student.id = student.id.replace(/\D/g, "");
     student.classYear = "20" + student.id.substring(0, 2);
   })
@@ -732,7 +734,7 @@ function createRental(studentID, assetTag, dateToReturn) {
       let subject = `Rental Confirmation: ${itemName}`;
 
       MailApp.sendEmail({
-        to: teacherEmail,
+        to: studentEmail,
         subject: subject,
         htmlBody: html
       });
@@ -951,7 +953,7 @@ function returnRentals(rentalsToReturn, returnedBy) {
   try {
     MailApp.sendEmail({
       to: teacherEmail,
-      cc: teacherEmail,
+      cc: studentEmail,
       subject: subject,
       htmlBody: messageHTML
     });

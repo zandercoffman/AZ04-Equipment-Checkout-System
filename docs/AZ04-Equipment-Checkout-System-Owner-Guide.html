@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>AZ04 Equipment Checkout System - New Owner Guide</title>
+  <style>
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      color: #222;
+      margin: 36px;
+      line-height: 1.5;
+      font-size: 11pt;
+    }
+    h1, h2, h3 {
+      color: #163a5f;
+      margin-top: 22px;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 24pt;
+      border-bottom: 2px solid #163a5f;
+      padding-bottom: 8px;
+    }
+    h2 {
+      font-size: 16pt;
+      border-bottom: 1px solid #d0d7de;
+      padding-bottom: 4px;
+    }
+    h3 {
+      font-size: 13pt;
+    }
+    p {
+      margin: 8px 0;
+    }
+    ul, ol {
+      margin-top: 6px;
+      margin-bottom: 10px;
+    }
+    li {
+      margin-bottom: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 16px 0;
+      font-size: 10.5pt;
+    }
+    th, td {
+      border: 1px solid #b8c2cc;
+      padding: 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: #eaf2fb;
+    }
+    .note {
+      border-left: 4px solid #2f6fad;
+      background: #f3f8fd;
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+    .warning {
+      border-left: 4px solid #c77900;
+      background: #fff7e6;
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+    .codeblock {
+      border: 1px solid #d0d7de;
+      background: #f6f8fa;
+      padding: 10px;
+      font-family: Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+      font-size: 10pt;
+      margin: 10px 0;
+    }
+    .small {
+      color: #555;
+      font-size: 10pt;
+    }
+  </style>
+</head>
+<body>
+  <h1>AZ04 Equipment Checkout System<br>New Owner Guide</h1>
+  <p><strong>Audience:</strong> Beginners taking over the project with little or no prior context.</p>
+  <p><strong>Prepared from:</strong> `Code.gs`, `index.html`, `setup.html`, `README.md`, and `LICENSE` in this repository.</p>
+  <p><strong>Date:</strong> April 20, 2026</p>
+
+  <div class="note">
+    <strong>Short version:</strong> This project is a Google Apps Script web app for checking school equipment in and out to students. The web app talks to a Google Sheet that acts as the database. If you protect the spreadsheet structure, keep the web app deployed, and understand the daily workflows, you can keep the system running.
+  </div>
+
+  <h2>1. Introduction</h2>
+  <p>The Equipment Checkout System helps staff manage school-owned equipment such as cameras, laptops, or other assets that students borrow and return. It replaces a slow manual process with a web page that can:</p>
+  <ul>
+    <li>store equipment records, student records, and rental history,</li>
+    <li>create and return rentals by typing or scanning codes,</li>
+    <li>generate printable barcodes for items and students,</li>
+    <li>email rental receipts, and</li>
+    <li>support a limited self-checkout / teacher assistant mode.</li>
+  </ul>
+  <p>This is <strong>not</strong> a normal local web app that you run with `npm`, `yarn`, or a local server. It runs inside Google Apps Script and uses Google Sheets as its database.</p>
+
+  <h2>2. How the System Is Structured</h2>
+  <p>The project has three main layers:</p>
+  <ol>
+    <li><strong>User interface:</strong> the pages the user sees in the browser.</li>
+    <li><strong>Server logic:</strong> Google Apps Script functions that read/write data.</li>
+    <li><strong>Data storage:</strong> a Google Spreadsheet with required tabs.</li>
+  </ol>
+
+  <div class="codeblock">Browser user
+  -> setup.html or index.html
+  -> google.script.run calls
+  -> Code.gs server functions
+  -> Google Sheets tabs: Items, Students, Rentals
+  -> Optional outputs: email receipts, barcode PDFs, report PDFs</div>
+
+  <h3>Main project files</h3>
+  <table>
+    <tr>
+      <th>File</th>
+      <th>What it does</th>
+      <th>When a new owner will care about it</th>
+    </tr>
+    <tr>
+      <td><strong>Code.gs</strong></td>
+      <td>Main Google Apps Script backend. Handles routing, reading/writing Sheets, creating rentals, returning rentals, sending emails, and generating report data.</td>
+      <td>When fixing business logic, updating spreadsheet behavior, changing email rules, or redeploying the app.</td>
+    </tr>
+    <tr>
+      <td><strong>index.html</strong></td>
+      <td>Main web app screen. Contains the item list, rental list, student list, popups, scanning mode, barcode generation, and most client-side JavaScript.</td>
+      <td>When changing the user interface or day-to-day workflows.</td>
+    </tr>
+    <tr>
+      <td><strong>setup.html</strong></td>
+      <td>First-run setup page. It asks the user for the spreadsheet URL and stores it in Apps Script user properties.</td>
+      <td>When onboarding new owners or changing the spreadsheet template/manual links.</td>
+    </tr>
+    <tr>
+      <td><strong>README.md</strong></td>
+      <td>Very short public-facing quick start and library list.</td>
+      <td>Useful as a quick reminder, but not detailed enough to fully own the project.</td>
+    </tr>
+    <tr>
+      <td><strong>LICENSE</strong></td>
+      <td>MIT license.</td>
+      <td>Useful if the new owner needs to understand reuse permissions.</td>
+    </tr>
+  </table>
+
+  <h3>Main spreadsheet tabs</h3>
+  <table>
+    <tr>
+      <th>Sheet tab</th>
+      <th>Purpose</th>
+      <th>Important notes</th>
+    </tr>
+    <tr>
+      <td><strong>Items</strong></td>
+      <td>Stores each piece of equipment.</td>
+      <td>The code expects a fixed column order. Important fields include room/area, item description, make/model, asset tag number, serial number, notes, status, rental ID, and school. The code writes item data starting in column B, so do not rearrange this sheet unless you also update the code.</td>
+    </tr>
+    <tr>
+      <td><strong>Students</strong></td>
+      <td>Stores student records.</td>
+      <td>Important fields are student ID, class year, period, and name.</td>
+    </tr>
+    <tr>
+      <td><strong>Rentals</strong></td>
+      <td>Stores each checkout/return event.</td>
+      <td>Important fields include rental ID, item ID, rental status, checked-out student ID, checkout date, expected return date, return date, returned by, and notes.</td>
+    </tr>
+  </table>
+
+  <div class="warning">
+    <strong>Most important ownership rule:</strong> do not rename the spreadsheet tabs or reorder the spreadsheet columns casually. This project is tightly coupled to the spreadsheet structure.
+  </div>
+
+  <h2>3. Core Modules in Simple Terms</h2>
+
+  <h3>A. Setup and configuration</h3>
+  <p>When the app opens, `Code.gs` checks whether the current user has already saved a spreadsheet URL in Apps Script <strong>User Properties</strong>. If not, the user sees `setup.html` first.</p>
+  <p>This means the spreadsheet link is stored <strong>per user account</strong>, not as one global setting for everyone.</p>
+  <ul>
+    <li>If a brand-new owner opens the app, they may need to paste the spreadsheet URL once.</li>
+    <li>If you switch to a new spreadsheet later, you must clear or replace that saved URL.</li>
+  </ul>
+
+  <h3>B. Item management</h3>
+  <p>The Items area shows all equipment records. Owners can:</p>
+  <ul>
+    <li>add items in batches,</li>
+    <li>edit item details,</li>
+    <li>delete selected items, and</li>
+    <li>generate barcode PDFs for selected items.</li>
+  </ul>
+  <p>Each item should have a unique asset tag number. The code blocks duplicates.</p>
+
+  <h3>C. Student management</h3>
+  <p>The Students area stores the borrower list. Owners can:</p>
+  <ul>
+    <li>import students from a CSV file,</li>
+    <li>add students manually,</li>
+    <li>edit student details,</li>
+    <li>delete selected students, and</li>
+    <li>generate barcode PDFs for selected students.</li>
+  </ul>
+  <p>The CSV import expects columns in this order: <strong>ID, Name, Period</strong>.</p>
+
+  <h3>D. Rental management</h3>
+  <p>The Rentals area shows outstanding rentals. The real work happens through <strong>Rental Mode</strong> (the scanning popup), where staff can create rentals and return them by entering or scanning two codes:</p>
+  <ul>
+    <li>one student code, and</li>
+    <li>one item code.</li>
+  </ul>
+  <p>The app figures out which code is which, checks whether the item is available, and then updates the spreadsheet.</p>
+
+  <h3>E. Email receipts</h3>
+  <p>When a rental is created, the script tries to email a receipt to the student. When a rental is returned, it emails the teacher and CCs the student.</p>
+  <p><strong>Important:</strong> the student email format is hardcoded as:</p>
+  <div class="codeblock">s{studentID}@stu.tempeunion.org</div>
+  <p>If your district changes domains or does not use that format, you will need to update the code.</p>
+
+  <h3>F. Barcode and PDF tools</h3>
+  <p>The app can generate barcode PDFs for items and students. These PDFs are created in the browser and downloaded directly by the user.</p>
+
+  <h3>G. Reports</h3>
+  <p>The backend contains report logic for:</p>
+  <ul>
+    <li>item popularity / usage, and</li>
+    <li>lost items.</li>
+  </ul>
+  <p>However, in the current UI the Report Mode button is hidden. Treat reports as an advanced/optional feature that should be tested before relying on it.</p>
+
+  <h2>4. Requirements, Tools, and Dependencies</h2>
+
+  <h3>What you need to run the system</h3>
+  <ul>
+    <li>A Google account with access to Google Apps Script and Google Sheets.</li>
+    <li>The project source files (`Code.gs`, `index.html`, `setup.html`).</li>
+    <li>A Google Sheet built from the project template.</li>
+    <li>A browser with internet access.</li>
+    <li>Optional but helpful: barcode scanner, printer, and access to student roster exports.</li>
+  </ul>
+
+  <h3>Important built-in Google services used by the project</h3>
+  <table>
+    <tr>
+      <th>Service</th>
+      <th>Why it matters</th>
+    </tr>
+    <tr>
+      <td><strong>SpreadsheetApp</strong></td>
+      <td>Reads and writes the Google Sheet database.</td>
+    </tr>
+    <tr>
+      <td><strong>HtmlService</strong></td>
+      <td>Serves the web pages.</td>
+    </tr>
+    <tr>
+      <td><strong>PropertiesService</strong></td>
+      <td>Stores the spreadsheet URL per user.</td>
+    </tr>
+    <tr>
+      <td><strong>MailApp</strong></td>
+      <td>Sends rental emails.</td>
+    </tr>
+    <tr>
+      <td><strong>Session</strong></td>
+      <td>Gets the active user's email and time zone context.</td>
+    </tr>
+    <tr>
+      <td><strong>Utilities</strong></td>
+      <td>Formats dates and encodes the injected JavaScript payload.</td>
+    </tr>
+  </table>
+
+  <h3>Front-end libraries loaded from CDNs</h3>
+  <table>
+    <tr>
+      <th>Library</th>
+      <th>Used for</th>
+    </tr>
+    <tr>
+      <td>Tailwind CSS + Flowbite</td>
+      <td>Most page styling and components.</td>
+    </tr>
+    <tr>
+      <td>Bootstrap</td>
+      <td>Additional UI styling/helpers.</td>
+    </tr>
+    <tr>
+      <td>jQuery</td>
+      <td>General DOM convenience (limited use).</td>
+    </tr>
+    <tr>
+      <td>SheetJS (xlsx)</td>
+      <td>Spreadsheet import support.</td>
+    </tr>
+    <tr>
+      <td>JsBarcode</td>
+      <td>Barcode generation.</td>
+    </tr>
+    <tr>
+      <td>jsPDF + AutoTable + canvg</td>
+      <td>PDF barcode/report generation.</td>
+    </tr>
+    <tr>
+      <td>React / ReactDOM</td>
+      <td>Loaded, but not central to the current business logic.</td>
+    </tr>
+  </table>
+
+  <div class="note">
+    <strong>No package install step:</strong> There is no `npm install` step in this repository. Most browser-side libraries are loaded from the internet at runtime.
+  </div>
+
+  <h2>5. Step-by-Step Setup Guide</h2>
+
+  <h3>Step 1: Make a copy of the spreadsheet template</h3>
+  <p>The setup page currently points to this template copy link:</p>
+  <p class="small">https://docs.google.com/spreadsheets/d/1_N_s4pTp-O2M5lZtUWNwDKYLuC0JghO8ryt97Pk5Juk/copy</p>
+  <ol>
+    <li>Open the template link.</li>
+    <li>Choose <strong>Make a copy</strong>.</li>
+    <li>Name the spreadsheet clearly, for example: <em>CTE Equipment Checkout Database 2026-2027</em>.</li>
+    <li>Keep the required tabs and column order exactly as provided.</li>
+  </ol>
+
+  <h3>Step 2: Prepare the Apps Script project</h3>
+  <p>The simplest beginner path is to keep this as a Google Apps Script project.</p>
+  <ol>
+    <li>Create a new Apps Script project, or make a copy of the existing one if you already have access.</li>
+    <li>Add or confirm these three files exist inside the Apps Script project:</li>
+  </ol>
+  <div class="codeblock">Code.gs
+index.html
+setup.html</div>
+  <ol start="3">
+    <li>Paste in the contents from this repository, or verify the project already matches these files.</li>
+    <li>Save all files.</li>
+  </ol>
+
+  <h3>Step 3: Authorize the script</h3>
+  <p>The first time the script tries to access Sheets, user properties, or email, Google will require authorization.</p>
+  <ol>
+    <li>Use the owner account that should control the system.</li>
+    <li>Review and accept the permissions when prompted.</li>
+    <li>If email sending is important for your workflow, test that authorization before live use.</li>
+  </ol>
+
+  <h3>Step 4: Deploy the web app</h3>
+  <p>The repository README recommends this deployment path:</p>
+  <ol>
+    <li>In Apps Script, click <strong>Deploy</strong> -> <strong>New deployment</strong>.</li>
+    <li>Select <strong>Web app</strong>.</li>
+    <li>Use the recommended settings from the current README:</li>
+  </ol>
+  <ul>
+    <li><strong>Execute as:</strong> User accessing the web app</li>
+    <li><strong>Who has access:</strong> Anyone, or Anyone within your district</li>
+  </ul>
+  <ol start="4">
+    <li>Deploy and save the web app URL somewhere safe.</li>
+  </ol>
+  <div class="warning">
+    <strong>Before changing deployment settings:</strong> think about who should be allowed to open the app, who can edit data, and whether students will ever access it directly. If you are unsure, test on a copy first.
+  </div>
+
+  <h3>Step 5: Connect the web app to the spreadsheet</h3>
+  <ol>
+    <li>Open the deployed web app URL.</li>
+    <li>If no spreadsheet URL has been saved for your account yet, the setup page appears.</li>
+    <li>Paste the URL of your spreadsheet copy.</li>
+    <li>Click <strong>Submit</strong>.</li>
+    <li>Reload the page.</li>
+  </ol>
+  <p>After that, the main equipment system should load instead of the setup page.</p>
+
+  <h3>Step 6: Run a smoke test before live use</h3>
+  <ol>
+    <li>Add one test student.</li>
+    <li>Add one test item.</li>
+    <li>Create a test rental in Rental Mode.</li>
+    <li>Return the same rental.</li>
+    <li>Confirm the spreadsheet updated correctly.</li>
+    <li>Confirm any expected email receipt was sent.</li>
+  </ol>
+
+  <h2>6. What a New Owner Will Do Day to Day</h2>
+
+  <h3>Workflow 1: Add new equipment</h3>
+  <ol>
+    <li>Open the <strong>Items</strong> section.</li>
+    <li>Click <strong>Add Items</strong>.</li>
+    <li>Enter the item details.</li>
+    <li>Make sure each item has a unique <strong>Asset Tag Number</strong>. This is required.</li>
+    <li>Save the items.</li>
+    <li>Download and print the generated barcode PDF.</li>
+    <li>Attach the barcode labels to the physical equipment.</li>
+  </ol>
+  <p><strong>Practical note:</strong> the add-items popup allows batches up to 20 items at a time.</p>
+
+  <h3>Workflow 2: Import or add students</h3>
+  <p>The fastest normal method is CSV import.</p>
+  <ol>
+    <li>Export your student list.</li>
+    <li>Make sure the columns are in this order: <strong>ID, Name, Period</strong>.</li>
+    <li>Save the file as CSV.</li>
+    <li>Open the <strong>Students</strong> section.</li>
+    <li>Click <strong>Import Students</strong>.</li>
+    <li>After import, spot-check a few student records.</li>
+  </ol>
+  <p>Example CSV:</p>
+  <div class="codeblock">ID,Name,Period
+26600042,Jane Doe,3
+26600043,John Smith,5</div>
+  <p>If you only need a few records, you can also use <strong>Add Students</strong> and type them manually.</p>
+
+  <h3>Workflow 3: Create a rental</h3>
+  <ol>
+    <li>Click <strong>Rental Mode</strong>.</li>
+    <li>Make sure the mode is set to <strong>Create Rentals</strong>.</li>
+    <li>Scan or type the student ID and the item barcode. The order does not matter.</li>
+    <li>When prompted, enter the intended return date.</li>
+    <li>The system creates the rental, updates the item status to <strong>Out</strong>, and logs the event in the Rentals sheet.</li>
+  </ol>
+  <p><strong>Safest date format for staff:</strong> use a normal browser-friendly format such as <strong>MM/DD/YYYY</strong>.</p>
+
+  <h3>Workflow 4: Return a rental</h3>
+  <ol>
+    <li>Click <strong>Rental Mode</strong>.</li>
+    <li>Switch to <strong>Return Rentals</strong>.</li>
+    <li>Scan or type the student ID and item barcode.</li>
+    <li>The system finds the outstanding rental, marks it returned, and changes the item status back to <strong>In</strong>.</li>
+  </ol>
+
+  <h3>Workflow 5: Use Teacher Assistant / Self Checkout Mode</h3>
+  <ol>
+    <li>Open the <strong>Rentals</strong> section.</li>
+    <li>Click <strong>Enable Teacher Assistant Mode</strong>.</li>
+    <li>The app switches into a safer mode where editing buttons are removed.</li>
+    <li>Rental Mode is still available for checkouts.</li>
+    <li>Reload the page when you want editing tools back.</li>
+  </ol>
+  <p>This is useful when the checkout station is being used by a teacher assistant or as a supervised kiosk.</p>
+
+  <h3>Workflow 6: Generate barcodes</h3>
+  <ol>
+    <li>Select the items or students you want.</li>
+    <li>Click the appropriate barcode button.</li>
+    <li>Print the downloaded PDF.</li>
+    <li>Keep barcode labels readable and consistent.</li>
+  </ol>
+
+  <h3>Workflow 7: Check history or audit the database</h3>
+  <ul>
+    <li>The <strong>Rentals</strong> section mainly shows <strong>outstanding</strong> rentals.</li>
+    <li>The <strong>See Past Rentals</strong> link currently points to the spreadsheet, not a special filtered report page.</li>
+    <li>The <strong>Your Database</strong> link opens the Google Sheet directly.</li>
+    <li>For full history, filters, cleanup, or advanced fixes, work in the spreadsheet carefully.</li>
+  </ul>
+
+  <h2>7. Setup, Usage, and Maintenance Details the New Owner Should Know</h2>
+
+  <h3>Per-user configuration matters</h3>
+  <p>The saved spreadsheet URL is stored with <strong>User Properties</strong>. That means:</p>
+  <ul>
+    <li>one owner can connect to the spreadsheet and use the app,</li>
+    <li>another new owner may still see the setup page the first time they open it, and</li>
+    <li>changing the database for one account may not automatically change it for everyone else.</li>
+  </ul>
+
+  <h3>How to switch to a different spreadsheet later</h3>
+  <p>There is no visible reset button in the UI. The backend includes helper functions for this.</p>
+  <ol>
+    <li>Open the Apps Script editor.</li>
+    <li>Run <strong>resetInventoryURL()</strong> or <strong>del()</strong>.</li>
+    <li>Reload the web app.</li>
+    <li>Paste the new spreadsheet URL into the setup page.</li>
+  </ol>
+
+  <h3>What to do after code changes</h3>
+  <ol>
+    <li>Save the updated Apps Script files.</li>
+    <li>Create a new web app deployment version or update the deployment.</li>
+    <li>Test using a non-production spreadsheet copy first.</li>
+    <li>Verify all critical workflows:</li>
+  </ol>
+  <ul>
+    <li>load app,</li>
+    <li>add student,</li>
+    <li>add item,</li>
+    <li>create rental,</li>
+    <li>return rental,</li>
+    <li>generate barcode,</li>
+    <li>check email receipt.</li>
+  </ul>
+
+  <h3>Recommended owner routine</h3>
+  <table>
+    <tr>
+      <th>When</th>
+      <th>Recommended task</th>
+    </tr>
+    <tr>
+      <td>Daily or as needed</td>
+      <td>Check outstanding rentals, add new assets, and make sure barcode labels stay attached and readable.</td>
+    </tr>
+    <tr>
+      <td>Beginning of each term</td>
+      <td>Import a fresh student roster and remove or archive outdated student records if your process allows it.</td>
+    </tr>
+    <tr>
+      <td>Weekly or monthly</td>
+      <td>Make a backup copy of the Google Sheet database.</td>
+    </tr>
+    <tr>
+      <td>Before any code or spreadsheet structure change</td>
+      <td>Duplicate the spreadsheet and test there first.</td>
+    </tr>
+    <tr>
+      <td>At ownership handoff time</td>
+      <td>Confirm the next owner has the spreadsheet link, Apps Script access, deployment URL, and this guide.</td>
+    </tr>
+  </table>
+
+  <h3>Hardcoded links and assumptions worth reviewing during maintenance</h3>
+  <ul>
+    <li>Spreadsheet template link in `setup.html`.</li>
+    <li>Manual/help document link in `setup.html` and the header help button in `index.html`.</li>
+    <li>Student email domain in `Code.gs`.</li>
+    <li>Deployment recommendation in `README.md`.</li>
+  </ul>
+
+  <h3>Automatic migration note</h3>
+  <p>On startup, the backend checks whether the `Items` sheet contains a `School` header. If not, it attempts a migration on the sheet.</p>
+  <div class="warning">
+    If you are opening a very old inventory sheet, make a backup copy first. The migration logic changes columns automatically.
+  </div>
+
+  <h2>8. Common Mistakes to Avoid</h2>
+  <ul>
+    <li><strong>Do not rename sheet tabs.</strong> The code expects `Items`, `Students`, and `Rentals`.</li>
+    <li><strong>Do not reorder spreadsheet columns casually.</strong> The backend reads and writes by fixed column positions.</li>
+    <li><strong>Do not allow duplicate asset tags.</strong> Asset tags are treated as the unique ID for items.</li>
+    <li><strong>Do not import student CSVs with the wrong column order.</strong> The current import expects `ID, Name, Period`.</li>
+    <li><strong>Do not expect rental editing from the modal.</strong> The rental details screen is not fully implemented for saving edits.</li>
+    <li><strong>Do not assume reports are fully live in the UI.</strong> Report code exists, but the report button is hidden in the current interface.</li>
+    <li><strong>Do not forget to redeploy after code changes.</strong> Saving files alone is not always enough for a web app update to reach users.</li>
+    <li><strong>Do not forget that setup is per user.</strong> A new owner may need to enter the spreadsheet URL once even if the system already works for you.</li>
+  </ul>
+
+  <h2>9. Troubleshooting Guide</h2>
+  <table>
+    <tr>
+      <th>Problem</th>
+      <th>Likely cause</th>
+      <th>What to do</th>
+    </tr>
+    <tr>
+      <td>The setup page keeps showing up.</td>
+      <td>The spreadsheet URL was never saved for this user, or it was cleared.</td>
+      <td>Paste the spreadsheet URL again. If you are intentionally switching databases, run `resetInventoryURL()` first.</td>
+    </tr>
+    <tr>
+      <td>The main app will not load after setup.</td>
+      <td>The spreadsheet URL is wrong, the user lacks access to the sheet, or the script still needs authorization.</td>
+      <td>Open the spreadsheet directly, confirm access, then re-test with the owner account. Re-authorize Apps Script if needed.</td>
+    </tr>
+    <tr>
+      <td>A rental cannot be created.</td>
+      <td>The student is not in the database, the item is already Out, or the item is in Repair/Lost-like status.</td>
+      <td>Check that the student exists in the Students sheet and that the item status is `In` before trying again.</td>
+    </tr>
+    <tr>
+      <td>Rental Mode says a code is not in the database.</td>
+      <td>The student or item record does not exist, or the barcode text does not match the stored ID exactly.</td>
+      <td>Search the spreadsheet for the code, fix the record if needed, and reprint the barcode if the label is wrong.</td>
+    </tr>
+    <tr>
+      <td>Student import behaves strangely.</td>
+      <td>The CSV columns are not in the expected order, or the file has unexpected formatting.</td>
+      <td>Rebuild the CSV so it is `ID, Name, Period`. Then import again.</td>
+    </tr>
+    <tr>
+      <td>Emails are not arriving.</td>
+      <td>Mail permissions are missing, the active account is wrong, or the student email domain is not correct for your district.</td>
+      <td>Re-authorize the script, verify the active account, and update the hardcoded student email rule in `Code.gs` if necessary.</td>
+    </tr>
+    <tr>
+      <td>The rental details popup does not let you save a fix.</td>
+      <td>That screen is not fully implemented in the current code.</td>
+      <td>Use a careful spreadsheet correction or return/recreate the rental instead.</td>
+    </tr>
+    <tr>
+      <td>You cannot find report mode.</td>
+      <td>The report button is hidden in the current UI.</td>
+      <td>If you need reports, treat them as an owner-level enhancement and test thoroughly before exposing them to users.</td>
+    </tr>
+    <tr>
+      <td>Editing buttons disappeared.</td>
+      <td>Teacher Assistant / Self Checkout Mode is active.</td>
+      <td>Reload the page to restore normal editing mode.</td>
+    </tr>
+  </table>
+
+  <h2>10. Beginner-Friendly Examples</h2>
+
+  <h3>Example: adding one camera</h3>
+  <ul>
+    <li>Room/Area: `C214`</li>
+    <li>Item Description: `Canon camera body`</li>
+    <li>Make/Model: `Canon EOS Rebel T7`</li>
+    <li>Asset Tag Number: `EX104`</li>
+    <li>Serial Number: `SN-001234`</li>
+    <li>School: `Tempe High`</li>
+  </ul>
+
+  <h3>Example: student import file</h3>
+  <div class="codeblock">ID,Name,Period
+26600042,Jane Doe,3
+26600043,John Smith,5
+26600044,Avery Lee,2</div>
+
+  <h3>Example: checkout workflow</h3>
+  <ol>
+    <li>Open Rental Mode.</li>
+    <li>Choose Create Rentals.</li>
+    <li>Scan student ID `26600042`.</li>
+    <li>Scan item `EX104`.</li>
+    <li>Enter return date `06/12/2026`.</li>
+    <li>The item becomes Out and the rental appears in the Rentals list.</li>
+  </ol>
+
+  <h2>11. Handoff Checklist for New Owners</h2>
+  <p>Before the old owner steps away, make sure the new owner has all of the following:</p>
+  <ul>
+    <li>Access to the Google Sheet database.</li>
+    <li>Access to the Google Apps Script project.</li>
+    <li>The current deployed web app URL.</li>
+    <li>The spreadsheet template link.</li>
+    <li>The help/manual link currently used by the app.</li>
+    <li>Knowledge of who is allowed to edit the system.</li>
+    <li>A working test showing one item add, one student add/import, one rental, and one return.</li>
+    <li>A recent backup copy of the spreadsheet.</li>
+  </ul>
+
+  <h2>12. Final Owner Notes</h2>
+  <p>If you only remember three things, remember these:</p>
+  <ol>
+    <li><strong>Protect the spreadsheet structure.</strong></li>
+    <li><strong>Test on a copy before making changes.</strong></li>
+    <li><strong>Keep the deployment URL, spreadsheet URL, and ownership access documented.</strong></li>
+  </ol>
+  <p>With those three habits, this project should remain manageable even for a beginner owner.</p>
+
+  <p class="small">License note: this repository includes an MIT License, which generally allows reuse and modification as long as the license notice is kept with the software.</p>
+</body>
+</html>

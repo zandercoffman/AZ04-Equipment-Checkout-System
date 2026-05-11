@@ -1644,7 +1644,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let doesHaveHeader = false;
 
         for (const line of lines) {
-            let [id, name, period] = line.split(',').map(cell => cell.trim());
+            let lineSplit = line.split(',');
+
+            let [id, name, period, extra] = line.split(',').map(cell => cell.trim());
+
+            if (extra) {
+              name = name + ", " + period;
+              period = extra;
+            }
+
             if (id.toLowerCase().includes("id") || name.toLowerCase().includes("name") || period.toLowerCase().includes("period")) {
               doesHaveHeader = true;
             }
