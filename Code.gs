@@ -339,31 +339,31 @@ function editItemsInDatabase(items) {
 
 
     //convert the data into the format .setValues() wants and update each item
-    let dataToWrite = []
+    const sheetValues = dataRange.getValues(); // cache values to avoid repeated reads
+
     items.forEach((item) => {
-      dataToWrite = [[item.roomArea, item.itemDescription, item.makeModel, item.assetTagNumber, item.serialNumber, item.notes, item.status, item.rentalID, item.school]];
+      const dataToWrite = [[item.roomArea, item.itemDescription, item.makeModel, item.assetTagNumber, item.serialNumber, item.notes, item.status, item.rentalID, item.school]];
       let wroteData = false;
 
-      for (let r = 0; r < height; r++) {
-        let id = dataRange.getValues()[r][4]
-        Logger.log(id)
+      for (let r = 0; r < sheetValues.length; r++) {
+        let id = sheetValues[r][4];
 
         if (id == item.assetTagNumber) {
-
           let rangeToWrite = itemSheet.getRange(r + 1, 2, 1, 9);
-          rangeToWrite.setValues(dataToWrite)
-          Logger.log("Wrote data")
+          rangeToWrite.setValues(dataToWrite);
+          Logger.log("Wrote data for asset: " + item.assetTagNumber);
           wroteData = true;
           break;
         }
       }
 
       if (!wroteData) {
-        Logger.log("Failed to update item: " + item);
-        return "Failed to update item: " + item;
+        Logger.log("Failed to update item: " + JSON.stringify(item));
+        throw new Error("Failed to update item: " + item.assetTagNumber);
       }
-
     });
+
+    return "success";
 
   }
 }
@@ -433,16 +433,19 @@ function deleteItemsFromInventory(assetTags) {
   var values = range.getValues();
 
   let error = false;
+  Logger.log("Attempting to delete the following items: " + JSON.stringify(assetTags));
 
-  Logger.log("Attempting to delete the following items: " + JSON.stringify(assetTags))
-  assetTags.forEach((assetTag) => {
-    for (var i = 0; i < values.length; i++) {
-      if (values[i][4] == assetTag) {
-        sheet.deleteRow(i + 1);
-        error = true;
-      }
+  // Use a Set for faster lookups
+  const assetSet = new Set(assetTags);
+
+  // Iterate bottom-up so row deletions don't shift remaining indices
+  for (let i = values.length - 1; i >= 0; i--) {
+    const rowAsset = values[i][4];
+    if (assetSet.has(rowAsset)) {
+      sheet.deleteRow(i + 1); // sheet rows are 1-indexed
+      error = true;
     }
-  })
+  }
 
   return error;
 }
@@ -461,17 +464,17 @@ function deleteStudentsFromDatabase(ids) {
 
   let error = false;
 
-  //remove the header row from the data
-  values.shift();
+  // Use a Set for quick membership tests
+  const idSet = new Set(ids);
 
-  ids.forEach((id) => {
-    for (var i = 0; i < values.length; i++) {
-      if (values[i][0] == id) {
-        sheet.deleteRow(i + 2);
-        error = true;
-      }
+  // Iterate bottom-up, skipping the header at index 0
+  for (let i = values.length - 1; i >= 1; i--) {
+    const rowId = values[i][0];
+    if (idSet.has(rowId)) {
+      sheet.deleteRow(i + 1); // convert 0-based to 1-based row index
+      error = true;
     }
-  })
+  }
 
   return error;
 }
@@ -504,6 +507,11 @@ function getStudents() {
   //find the sheet
   let studentSheet = datasheet.getSheetByName("Students");
 
+  if (!studentSheet) {
+    Logger.log("getStudents: Students sheet not found");
+    return {};
+  }
+
   //find the range which contains data
   let dataRange = studentSheet.getDataRange();
 
@@ -513,20 +521,36 @@ function getStudents() {
   //a dictionary which will be used to store student info
   let students = {};
 
-  //remove the first row containing headers
-  dataToConvert.shift();
 
+  // remove header row if present
+  if (dataToConvert.length > 0) {
+    dataToConvert.shift();
+  }
 
-  //for each student in the table convert the data into an easier to use format and append it to the students dictonary
-  for (student of dataToConvert) {
+  // for each student in the table convert the data into an easier to use format and append it to the students dictionary
+  for (let i = 0; i < dataToConvert.length; i++) {
+    const row = dataToConvert[i];
+    // Skip empty rows
+    if (!row || row.length === 0) continue;
 
-    students[student[0]] =
-    {
-      id: student[0],
-      classYear: student[1],
-      period: student[2],
-      name: student[3]
+    // Expect at least 4 columns: id, classYear, period, name
+    if (row.length < 4) {
+      Logger.log("getStudents: skipping malformed row " + (i + 2) + ": " + JSON.stringify(row));
+      continue;
     }
+
+    const id = String(row[0]).trim();
+    if (!id) {
+      Logger.log("getStudents: skipping row with empty id at " + (i + 2));
+      continue;
+    }
+
+    students[id] = {
+      id: id,
+      classYear: String(row[1] || "").trim(),
+      period: String(row[2] || "").trim(),
+      name: String(row[3] || "").trim()
+    };
   }
 
   //return the student info
@@ -538,6 +562,11 @@ function getItems() {
   //find the sheet
   let itemSheet = datasheet.getSheetByName("Items");
 
+  if (!itemSheet) {
+    Logger.log("getItems: Items sheet not found");
+    return {};
+  }
+
   //find the range which contains data
   let dataRange = itemSheet.getDataRange();
 
@@ -548,25 +577,40 @@ function getItems() {
   //a dictionary which will be used to store item info
   let items = {};
 
-  //remove the first row containing headers
-  dataToConvert.shift();
 
+  // remove header row if present
+  if (dataToConvert.length > 0) {
+    dataToConvert.shift();
+  }
 
-  //for each item in the table convert the data into an easier to use format and append it to the items dictonary
-  for (item of dataToConvert) {
+  // for each item in the table convert the data into an easier to use format and append it to the items dictionary
+  for (let i = 0; i < dataToConvert.length; i++) {
+    const row = dataToConvert[i];
+    if (!row || row.length === 0) continue;
 
-    items[item[4]] =
-    {
-      roomArea: item[1],
-      itemDescription: item[2],
-      location: item[9],
-      assetTagNumber: item[4],
-      serialNumber: item[5],
-      notes: item[6],
-      status: item[7],
-      rentalID: item[8],
-      school: item[9]
+    // Expect at least 5 columns to have an asset tag at index 4
+    if (row.length < 5) {
+      Logger.log("getItems: skipping malformed row " + (i + 2) + ": " + JSON.stringify(row));
+      continue;
     }
+
+    const assetTag = String(row[4]).trim();
+    if (!assetTag) {
+      Logger.log("getItems: skipping row with empty asset tag at " + (i + 2));
+      continue;
+    }
+
+    items[assetTag] = {
+      roomArea: String(row[1] || "").trim(),
+      itemDescription: String(row[2] || "").trim(),
+      makeModel: String(row[3] || "").trim(),
+      assetTagNumber: assetTag,
+      serialNumber: String(row[5] || "").trim(),
+      notes: String(row[6] || "").trim(),
+      status: String(row[7] || "").trim(),
+      rentalID: String(row[8] || "").trim(),
+      school: String(row[9] || "").trim()
+    };
   }
 
   //return the item info
@@ -634,6 +678,9 @@ function createRental(studentID, assetTag, dateToReturn) {
 
   let items = getItems();
   let item = items[assetTag];
+  if (!item) {
+    return "Can't create new rental, the specified item was not found in the database";
+  }
   let itemName = item.itemDescription || "Unnamed Item";
 
 
@@ -713,10 +760,9 @@ function createRental(studentID, assetTag, dateToReturn) {
     let studentEmail = `s${studentID}@stu.tempeunion.org`;
 
 
-    //Sends email
+    // Attempt to send email; don't mask failures — report them.
+    let emailSent = true;
     try {
-
-
       let rentalIDStr = newRentalID.toString();
       let dateOutStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
 
@@ -730,7 +776,6 @@ function createRental(studentID, assetTag, dateToReturn) {
         contactEmail: teacherEmail
       });
 
-
       let subject = `Rental Confirmation: ${itemName}`;
 
       MailApp.sendEmail({
@@ -739,10 +784,11 @@ function createRental(studentID, assetTag, dateToReturn) {
         htmlBody: html
       });
     } catch (err) {
-      Logger.log(JSON.stringify(err));
-    } finally {
-      return "success"
+      Logger.log('Email send error: ' + JSON.stringify(err));
+      emailSent = false;
     }
+
+    return emailSent ? "success" : "success:email_failed";
 
 
   }
