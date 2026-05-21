@@ -1707,36 +1707,40 @@ document.addEventListener('DOMContentLoaded', () => {
   function generateBarcodePDF(info) {
   const { jsPDF } = window.jspdf;
 
-  const barcodeWidth = 4.0;  // cm
-  const barcodeHeight = 2.4; // cm
+  const barcodeWidth = 4.0;   // cm
+  const barcodeHeight = 2.4;  // cm
+  const rowsPerPage = 7;
+  const topMargin = 1.5;      // cm
+  const rowSpacing = 3.8;     // cm between row starts
+  const labelX = 1.5;         // cm
+  const labelYOffset = 1.2;   // cm from row top
+  const barcodeX = 10;        // cm
 
-  const doc = new jsPDF({ unit: "cm" }); // use cm for easier size control
+  const doc = new jsPDF({ unit: "cm", format: "letter", orientation: "portrait" });
 
-  let numberOfPages = 1;
   for (let i = 0; i < info.length; i++) {
-    // add a page if necessary
-    if (i % 7 === 0 && i !== 0) {
+    if (i > 0 && i % rowsPerPage === 0) {
       doc.addPage("letter", "portrait");
-      doc.setPage(i / 7 + 1);
-      numberOfPages++;
     }
 
-    // text label
-    doc.text(info[i][0], 1.5, 2.7 + 4 * i - ((numberOfPages - 1) * doc.internal.pageSize.height / 2.54)); 
-    // note: converting px/mm if needed
+    const rowIndex = i % rowsPerPage;
+    const rowY = topMargin + rowIndex * rowSpacing;
+
+    // Keep label and barcode anchored to the same row position on every page.
+    doc.text(String(info[i][0]), labelX, rowY + labelYOffset);
 
     let barcodeImage = generateBarcode(info[i]);
     if (barcodeImage) {
       doc.addImage(
-        barcodeImage,  // image data
-        "PNG",         // format
-        10,            // x position in cm
-        1.5 + 4 * (i % 7), // y position in cm, adjust per barcode
-        barcodeWidth,  
+        barcodeImage,
+        "PNG",
+        barcodeX,
+        rowY,
+        barcodeWidth,
         barcodeHeight,
-        undefined,     // alias
-        "FAST",        // compression
-        0              // rotation
+        undefined,
+        "FAST",
+        0
       );
     }
   }
