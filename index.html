@@ -1732,15 +1732,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let barcodeImage = generateBarcode(info[i]);
     if (barcodeImage) {
       doc.addImage(
-        barcodeImage,
-        "PNG",
-        barcodeX,
-        rowY,
+        barcodeImage, //image data
+        "PNG", //image format
+        barcodeX, //x position in cm
+        rowY, //y position in cm
         barcodeWidth,
         barcodeHeight,
-        undefined,
-        "FAST",
-        0
+        undefined, //alias
+        "FAST", //compression
+        0 //rotation
       );
     }
   }
