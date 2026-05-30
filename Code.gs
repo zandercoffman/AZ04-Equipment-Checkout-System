@@ -339,7 +339,7 @@ function editItemsInDatabase(items) {
 
 
     //convert the data into the format .setValues() wants and update each item
-    const sheetValues = dataRange.getValues();
+    const sheetValues = dataRange.getValues(); //read dataRange here instead of inside the for loop to reduce repeated reads
 
     items.forEach((item) => {
       const dataToWrite = [[item.roomArea, item.itemDescription, item.makeModel, item.assetTagNumber, item.serialNumber, item.notes, item.status, item.rentalID, item.school]];
