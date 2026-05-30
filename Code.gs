@@ -339,7 +339,7 @@ function editItemsInDatabase(items) {
 
 
     //convert the data into the format .setValues() wants and update each item
-    const sheetValues = dataRange.getValues(); // cache values to avoid repeated reads
+    const sheetValues = dataRange.getValues(); // FALSE ->  "values to avoid repeated readscache" <- FALSE Take this as a reminder never to trust AI!, this is FALSE.
 
     items.forEach((item) => {
       const dataToWrite = [[item.roomArea, item.itemDescription, item.makeModel, item.assetTagNumber, item.serialNumber, item.notes, item.status, item.rentalID, item.school]];

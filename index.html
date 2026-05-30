@@ -1733,9 +1733,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (barcodeImage) {
       doc.addImage(
         barcodeImage,
-        "PNG",
-        barcodeX,
-        rowY,
+        "PNG", // Format
+        barcodeX, // X position in CM, aligned with what Mr. Manigold wants
+        rowY, // Y position in CM, aligned with the top of the row
         barcodeWidth,
         barcodeHeight,
         undefined,
