@@ -40,7 +40,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!--Custom Component Library for CSS Tailwind-->
-  <link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" />
+  <!--<link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" />-->
+  <style>
+    <?!= include_3rd_party_library('flowbite'); ?>
+  </style>
 
   <!--JS Barcode library for generating pdfs with barcodes represeting items or students-->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>

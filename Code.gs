@@ -84,6 +84,14 @@ function getSetupPage() {
   return HtmlService.createHtmlOutputFromFile("setup").setTitle("Equipment Checkout System Setup");
 }
 
+//this function takes a file name and library name
+//reads the file (after prepending "3rd_party_library_"), splits it to find only the code for "libraryName" and returns it as text
+function includeLibrary(fileName, libraryName) {
+  let file = HtmlService.createHtmlOutputFromFile("3rd_party_library_" + fileName);
+  let fileTextContent = file.getContent();
+
+  console.log(fileTextContent);
+}
 function doGet(e) {
 
 
@@ -97,93 +105,14 @@ function doGet(e) {
       return getSetupPage();
     }
     else {
-      let htmlCode = ScriptApp.getResource('index').getDataAsString();
-
-
-      /*htmlParts = htmlCode.split("</script>")
+      let htmlResponse =  HtmlService.createTemplateFromFile('index').evaluate()
       
-      let output = HtmlService.createHtmlOutput("")
-
-      for (let i = 0; i<htmlParts.length - 2; i++) {
-        let part = htmlParts[i]
-
-        output.append(part)
-        output.append("/")
-        output.append("/# sourceURL=javascript.js")
-        output.append("</script>")
-      }
-      
+      htmlResponse.setTitle("Equipment Checkout System");
 
 
-      let secondToLastPart = htmlParts[htmlParts.length - 2]
-
-      output.append(secondToLastPart)
-      output.append("/")
-      output.append("/# sourceURL=javascript.js")
-      output.append("</script>")
-
-
-
-      output.append(htmlParts[htmlParts.length - 1])
-      return output;*/
-
-
-
-
-
-      //Did this weird workaround to insert the js at runtime on the client instead of just doing return HTMLService.createHTMLServiceFromFile('index') with the js being in a script tag to resolve the following error
-      //Uncaught SyntaxError: "" string literal contains an unescaped line break userCodeAppPanel:1045:20
-      //userCodeAppPanel is something that google app scripts creates that might contain the code we put in script tags, and when clicking the error line number it took me to a long one liner file that I don't think even had code we wrote
-      //with this new weird workaround with js inserted at runtime, the error is gone (don't know why)
-
-      //////////////////////////
-      //////////////////////////
-      //I might have figured out the weird error (since there was a ' in a new item name and stuff wasn't base64 encoded for the openItemDetails function (now it is so this workaround might no longer be needed))
-      ///////////////////////////
-      ///////////////////////////
-
-      //split apart the index.html file and extract the js which needs to be removed and inserted at runtime to fix the weird error above
-      htmlParts = htmlCode.split("<!-- Start of js to remove and insert at runtime-->")
-      htmlPart0 = htmlParts[0];
-      htmlParts2 = htmlParts[1].split("<!-- End of js to remove and insert at runtime-->")
-      htmlPart1 = htmlParts2[0];
-      htmlPart2 = htmlParts2[1];
-
-      htmlParts = [htmlPart0, htmlPart1, htmlPart2]
-
-      if (htmlParts.length != 3) {
-        Logger.log("error generating index.html in Code.gs")
-        return HtmlService.createHtmlOutput("error generating index.html in Code.gs")
-      }
-
-      let output = HtmlService.createHtmlOutput(htmlParts[0]) //start creating the html object to return using the first part of the html up to where the js needs to be added
-
-
-
-      let jsCode = htmlParts[1].split('<script>')[1].split("</script>")[0] //remove the script tags from htmlParts[1] to extract only the js code
-
-
-      //this adds a script tag with a self executing function whose only purpose is to add another script tag at runtime on the client with the actual js which was extracted from index.html above
-      //modified from https://stackoverflow.com/questions/74050409/how-to-map-client-side-code-to-source-code
-      output.append(`<script>
-      (function () {
-      const code = decodeURIComponent(atob('${Utilities.base64Encode(
-        encodeURIComponent(jsCode)
-      )}'));
-      const scriptEl = document.createElement('script');
-      scriptEl.textContent = code;
-      //scriptEl.setAttribute("type", "module");
-      document.body.appendChild(scriptEl);
-      })();
-      </script>`)
-
-
-
-      //add the last bit of the html
-      output.append(htmlParts[2])
 
       //return the html
-      return output.setTitle("Equipment Checkout System");
+      return htmlResponse;
 
 
     }
