@@ -24,45 +24,41 @@
 ==================================== -->
 
 <head>
-  <base target="_top">
+  <base target=" _top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Equipment Checkout System</title>
 
   <!-- ========== SCRIPT IMPORTS ==========
-     - canvg: Converts SVG to Canvas for PDF use
      - React & ReactDOM: (Possible future UI use)
      - Tailwind config customization
      - jsPDF & autotable for PDF generation
 ======================================= -->
 
   <!--Download Tailwind CSS (CSS Framework)-->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <?!= include3rdPartyLibrary('tailwind-css'); ?> <!--JS script-->
 
   <!--Custom Component Library for CSS Tailwind-->
-  <!--<link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" />-->
-  <style>
-    <?!= include3rdPartyLibrary('flowbite'); ?>
-  </style>
+  <?!= include3rdPartyLibrary('flowbite_css'); ?> <!--CSS file-->
+
 
   <!--JS Barcode library for generating pdfs with barcodes represeting items or students-->
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+  <?!= include3rdPartyLibrary('jsbarcode'); ?> <!--JS script-->
 
   <!--Download google fonts-->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
     rel="stylesheet">
 
   <!--Download JQuery-->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <?!= include3rdPartyLibrary('jquery'); ?> <!--JS script-->
+  
 
   <!--Download Boostrap-->
-  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <?!= include3rdPartyLibrary('bootstrap-css'); ?> <!--CSS-->
+  <?!= include3rdPartyLibrary('bootstrap-js'); ?> <!--JS-->
 
   <!-- Importing a .xls to .json converter-->
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <?!= include3rdPartyLibrary('sheetjs'); ?> <!--JS script-->
   <!-- ChatGPT said: 
   
   Available Function: Class List via Admin Reports (XLS)
@@ -81,11 +77,7 @@ This provides details like student names, usernames, and possibly guardian permi
   -->
 
 
-
-  <!--
-  Old libraries
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3.1.0/dist/notyf.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/notyf@3.1.0/dist/notyf.min.js"></script>-->
+>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
@@ -1372,22 +1364,17 @@ This provides details like student names, usernames, and possibly guardian permi
      async data loading from server.
 ========================================= -->
   <div id="loading">
-    <!-- Loader icon from https://github.com/n3r4zzurr0/svg-spinners (MIT License) -->
-    <img class="report-indicator-loader-icon" alt="loading icon" width="64px" height="64px" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48c3R5bGU+LnNwaW5uZXJfRHVwVXthbmltYXRpb246c3Bpbm5lcl9zTTNEIDEuMnMgaW5maW5pdGV9LnNwaW5uZXJfR1d0WnthbmltYXRpb24tZGVsYXk6LjFzfS5zcGlubmVyX2R3TjZ7YW5pbWF0aW9uLWRlbGF5Oi4yc30uc3Bpbm5lcl80NlFQe2FuaW1hdGlvbi1kZWxheTouM3N9LnNwaW5uZXJfUEQ4MnthbmltYXRpb24tZGVsYXk6LjRzfS5zcGlubmVyX2VVZ2h7YW5pbWF0aW9uLWRlbGF5Oi41c30uc3Bpbm5lcl9lVWFQe2FuaW1hdGlvbi1kZWxheTouNnN9LnNwaW5uZXJfajM4SHthbmltYXRpb24tZGVsYXk6LjdzfS5zcGlubmVyX3RWbVh7YW5pbWF0aW9uLWRlbGF5Oi44c30uc3Bpbm5lcl9EUWhYe2FuaW1hdGlvbi1kZWxheTouOXN9LnNwaW5uZXJfR0lMNHthbmltYXRpb24tZGVsYXk6MXN9LnNwaW5uZXJfbjBZYnthbmltYXRpb24tZGVsYXk6MS4xc31Aa2V5ZnJhbWVzIHNwaW5uZXJfc00zRHswJSw1MCV7YW5pbWF0aW9uLXRpbWluZy1mdW5jdGlvbjpjdWJpYy1iZXppZXIoMCwxLDAsMSk7cjowfTEwJXthbmltYXRpb24tdGltaW5nLWZ1bmN0aW9uOmN1YmljLWJlemllciguNTMsMCwuNjEsLjczKTtyOjJweH19PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzcGlubmVyX0R1cFUiIGN4PSIxMiIgY3k9IjMiIHI9IjAiLz48Y2lyY2xlIGNsYXNzPSJzcGlubmVyX0R1cFUgc3Bpbm5lcl9HV3RaIiBjeD0iMTYuNTAiIGN5PSI0LjIxIiByPSIwIi8+PGNpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfbjBZYiIgY3g9IjcuNTAiIGN5PSI0LjIxIiByPSIwIi8+PGNpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfZHdONiIgY3g9IjE5Ljc5IiBjeT0iNy41MCIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyX0dJTDQiIGN4PSI0LjIxIiBjeT0iNy41MCIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyXzQ2UVAiIGN4PSIyMS4wMCIgY3k9IjEyLjAwIiByPSIwIi8+PGNpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfRFFoWCIgY3g9IjMuMDAiIGN5PSIxMi4wMCIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyX1BEODIiIGN4PSIxOS43OSIgY3k9IjE2LjUwIiByPSIwIi8+PGNpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfdFZtWCIgY3g9IjQuMjEiIGN5PSIxNi41MCIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyX2VVZ2giIGN4PSIxNi41MCIgY3k9IjE5Ljc5IiByPSIwIi8+PGNpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfajM4SCIgY3g9IjcuNTAiIGN5PSIxOS43OSIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyX2VVYVAiIGN4PSIxMiIgY3k9IjIxIiByPSIwIi8+PC9zdmc+"></img>
+    <?!= include3rdPartyLibrary('svg-spinners'); ?> <!--HTML5 image tag-->
   </div>
 
-  <script type="module">
-    import { Canvg } from 'https://cdn.skypack.dev/canvg@4.0.2' //see https://canvg.js.org/examples/browser
-    window.canvg = Canvg;
-  </script>
 
   <script>
     function onSuccess(response) {
         alert(JSON.stringify(response));
       }
   </script>
-  <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+  <?!= include3rdPartyLibrary('react'); ?> <!--JS file-->
+  <?!= include3rdPartyLibrary('react-dom'); ?> <!--JS file-->
 
 
   <script>
@@ -1403,16 +1390,15 @@ This provides details like student names, usernames, and possibly guardian permi
   </script>
 
   <!-- ========== SCRIPT IMPORTS ==========
-     - canvg: Converts SVG to Canvas for PDF use
      - React & ReactDOM: (Possible future UI use)
      - Tailwind config customization
      - jsPDF & autotable for PDF generation
      - Flowbite, a tailwind component library
 ======================================= -->
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
+  <?!= include3rdPartyLibrary('jspdf'); ?> <!--JS file-->
+  <?!= include3rdPartyLibrary('jspdf-autotable'); ?> <!--JS file-->
+  <?!= include3rdPartyLibrary('flowbite_js'); ?> <!--JS file-->
 
   <!-- ======== ADDED: Script for switching tabs ======== -->
   <script>

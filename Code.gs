@@ -86,11 +86,12 @@ function getSetupPage() {
 
 //this function takes a file name and library name
 //reads the file (after prepending "3rd_party_library_"), splits it to find only the code for "libraryName" and returns it as text
-function includeLibrary(fileName, libraryName) {
-  let file = HtmlService.createHtmlOutputFromFile("3rd_party_library_" + fileName);
-  let fileTextContent = file.getContent();
+function include3rdPartyLibrary(fileName) {
+  
+  let libraryContentAsHTMLObject = HtmlService.createHtmlOutputFromFile('3rd_party_library_' + fileName)
+  
+  return libraryContentAsHTMLObject.getContent(); //returns the HTML content as a string instead of an Object
 
-  console.log(fileTextContent);
 }
 function doGet(e) {
 
