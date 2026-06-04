@@ -1,0 +1,578 @@
+0001: AZ04 Equipment Checkout System
+0002: Code Navigation and Architecture Guide
+0003: Companion to the existing owner guide
+0004: Audience: New owners and beginner maintainers who need to understand how the code is organized, how data flows through the system, and where to make changes safely.
+0005: Prepared from the current repository state on April 20, 2026. This guide describes the code as it exists today in Code.gs, index.html, and setup.html.
+0006: Quick framing: this project is a Google Apps Script web app, not a traditional local web stack. The most important mental model is browser UI -&gt; google.script.run bridge -&gt; Apps Script functions -&gt; Google Sheets data -&gt; browser re-render or side effects such as email and PDF generation.
+0007: 1. How to read this codebase
+0008: A new maintainer will move faster if they read the code in layers instead of top to bottom.
+0009: - Start with Code.gs:21-40 to understand startup configuration and spreadsheet binding.
+0010: - Then read Code.gs:83 doGet to see how the app decides between setup.html and the main app.
+0011: - Next, read setup.html:145 submitURL so you understand first-run configuration.
+0012: - Then jump to index.html:1548 refresh and the render functions at index.html:2804, index.html:2918, and index.html:2997.
+0013: - Finish with index.html:3163 submitScanningMode and the rental functions in Code.gs:633 and Code.gs:885.
+0014: This codebase is organized around a few practical conventions rather than a formal framework.
+0015: - There is no bundler, build step, or typed API layer.
+0016: - Most UI behavior lives in one large script block inside index.html.
+0017: - Most server behavior lives in one Apps Script file, Code.gs.
+0018: - The spreadsheet is the persistence layer, so column order matters.
+0019: - Many UI buttons use inline onclick handlers, which means front-end function names must remain globally reachable.
+0020: - Data crosses the browser/server boundary as raw objects or JSON strings, not through shared types.
+0021: 2. Runtime architecture
+0022: The system has four execution zones.
+0023: Zone
+0024: What lives there
+0025: Why it matters
+0026: Browser UI
+0027: index.html markup, popups, tables, client-side state, barcode/report PDF generation
+0028: This is where the user clicks buttons, sees tables, and triggers google.script.run calls.
+0029: Apps Script server
+0030: Code.gs top-level state and functions
+0031: This layer reads and writes Google Sheets, decides which page to serve, and sends emails.
+0032: Google Sheet database
+0033: Items, Students, and Rentals tabs
+0034: This is the source of truth for inventory, borrowers, and rental history.
+0035: External services
+0036: CDN libraries and MailApp email delivery
+0037: The UI depends on browser-loaded libraries for styling and PDF work, and the server depends on Google mail services for receipts.
+0038: The most important request path is the page load path.
+0039: User opens deployed web app URL
+0040: -&gt; Apps Script runs doGet(e) in Code.gs:87
+0041: -&gt; If spreadsheetURL is missing, return setup.html through getSetupPage()
+0042: -&gt; Otherwise load index.html, split out the main script block, and inject that JavaScript at runtime
+0043: -&gt; Browser receives the page and runs refresh() in index.html:1548
+0044: -&gt; refresh() fetches students, items, rentals, and spreadsheet URL through google.script.run
+0045: -&gt; renderStudents(), renderItems(), and renderRentals() rebuild the visible tables
+0046: The same bridge pattern is reused for almost every interaction: the browser collects input, calls a named Apps Script function, the server updates the spreadsheet, and the browser refreshes local state.
+0047: 3. Repository map
+0048: File or resource
+0049: Primary responsibility
+0050: Best entry point
+0051: Code.gs
+0052: Main server-side logic. Owns configuration, page routing, spreadsheet reads and writes, rental creation and return, email generation, and report data.
+0053: Read Code.gs:21-40, Code.gs:83, Code.gs:198, Code.gs:502, Code.gs:536, Code.gs:633, and Code.gs:885 first.
+0054: index.html
+0055: Main web app UI. Owns page structure, client state, DOM rendering, modals, scanning mode, barcode generation, and report download behavior.
+0056: Start at index.html:815 for the visible layout and index.html:1440 for the main JavaScript block.
+0057: setup.html
+0058: First-run setup screen that collects the spreadsheet URL and stores it through the server.
+0059: Read setup.html:112-176, especially submitURL() at setup.html:145.
+0060: README.md
+0061: Short external overview and deployment notes.
+0062: Useful for orientation, but not detailed enough for maintenance.
+0063: Spreadsheet tabs
+0064: Operational data store for items, students, and rentals.
+0065: Treat the spreadsheet as part of the code contract, not just content.
+0066: 4. Spreadsheet-driven data model
+0067: The code does not use schema files or model classes. Instead, it converts sheet rows directly into plain JavaScript objects.
+0068: Tab
+0069: Used for
+0070: Primary server readers/writers
+0071: Items
+0072: Inventory records and current checkout status
+0073: Read by getItems(); written by addItemsToDatabase(), editItemsInDatabase(), deleteItemsFromInventory(), createRental(), and returnRentals().
+0074: Students
+0075: Borrower roster
+0076: Read by getStudents(); written by addStudentsToDatabase(), editStudentsInDatabase(), and deleteStudentsFromDatabase().
+0077: Rentals
+0078: Checkout and return history
+0079: Read by getRentals(); written by createRental() and returnRentals(); summarized by generateReport().
+0080: The most important object shapes are built in the read helpers.
+0081: Helper
+0082: Current object shape
+0083: Consumed by
+0084: Code.gs:502 getStudents()
+0085: id, classYear, period, name
+0086: index.html refresh(), renderStudents(), getCodeType(), createRental(), and student edit flows.
+0087: Code.gs:536 getItems()
+0088: roomArea, itemDescription, location, assetTagNumber, serialNumber, notes, status, rentalID, school
+0089: index.html renderItems(), getCodeType(), item modals, createRental(), returnRentals(), and report generation helpers.
+0090: Code.gs:752 getRentals()
+0091: rentalID, itemID, status, checkedOutTo, dateCheckedOut, dateExpectedReturned, dateReturned, notes, returnedBy, plus returnRental() method
+0092: index.html renderRentals(), createRental() for ID generation, returnRentals(), and generateReport().
+0093: Maintainer note: because these shapes are hand-built, any field change must be updated in all three places that care about it: the spreadsheet columns, the server-side row mapper, and the front-end rendering or form logic.
+0094: 5. Backend guide: Code.gs
+0095: Code.gs is the server spine of the application. Everything that touches persistent data or Google services ends up here.
+0096: Subsystem
+0097: Key references
+0098: What it owns
+0099: Boot and configuration
+0100: Code.gs:21-40, 47, 61
+0101: Loads user properties, opens the spreadsheet, performs simple migration logic, and stores or resets the spreadsheet URL.
+0102: Routing and page serving
+0103: Code.gs:83, 87, 198
+0104: Returns setup or main HTML and exposes JSON snapshots to the browser.
+0105: Student and item CRUD
+0106: Code.gs:226, 273, 314, 372, 430, 456
+0107: Adds, edits, and deletes spreadsheet rows for the two core entity types.
+0108: Data mapping helpers
+0109: Code.gs:502, 536, 752
+0110: Transforms raw sheet rows into the objects the browser and server use.
+0111: Rental lifecycle
+0112: Code.gs:576, 633, 821, 885
+0113: Creates receipts, creates rentals, applies returns, and sends email confirmations.
+0114: Reports and utilities
+0115: Code.gs:999, 1133, 1137
+0116: Builds report payloads and exposes small lookup helpers to the browser.
+0117: 5.1 Boot, configuration, and spreadsheet binding
+0118: The first important code runs before any function call. At Code.gs:21-40, the script loads User Properties, reads spreadsheetURL, and, if present, opens the spreadsheet immediately into the top-level datasheet variable.
+0119: - userPreferences is created with PropertiesService.getUserProperties().
+0120: - spreadsheetURL is read once at load time.
+0121: - datasheet is opened once at load time when spreadsheetURL is present.
+0122: - The startup block also inspects the Items sheet header row and adds a School column if it is missing.
+0123: This startup design explains why setup.html tells the user to reload after saving the spreadsheet URL: the top-level datasheet variable is bound during script initialization, so a fresh request is the safest way to ensure the server reopens the intended sheet.
+0124: The configuration helpers are small but central.
+0125: - Code.gs:47 setInventoryURL(url) stores the chosen spreadsheet URL and returns success or error.
+0126: - Code.gs:61 resetInventoryURL() clears the saved URL without deleting the property itself.
+0127: - Code.gs:42 del() deletes the property entirely. It is useful as a manual admin reset helper.
+0128: 5.2 Routing and page assembly
+0129: Code.gs:87 doGet(e) is the main HTTP entry point. It is the first server function to understand when tracing a user request.
+0130: - If the request is for the default path, doGet decides whether to serve setup.html or index.html.
+0131: - If spreadsheetURL is missing, doGet returns getSetupPage() from Code.gs:83.
+0132: - If spreadsheetURL exists, doGet loads the raw text of index.html with ScriptApp.getResource("index").getDataAsString().
+0133: The next part is specific to this codebase and matters to maintainers: the main JavaScript in index.html is not served normally. Instead, doGet searches for the markers around index.html:1440, extracts the script body, base64-encodes it, and appends a runtime script tag that re-inserts the JavaScript on the client.
+0134: Code.gs:87 doGet(e)
+0135: -&gt; read raw index.html text
+0136: -&gt; split on "Start of js to remove and insert at runtime" markers
+0137: -&gt; extract the main script body
+0138: -&gt; base64 encode it
+0139: -&gt; append a tiny bootstrap script to the HTML response
+0140: -&gt; browser decodes it and appends a new script element at runtime
+0141: That workaround exists so the app can avoid a historical Apps Script one-line-script parsing issue. As a maintainer, preserve those marker comments and the general injection pattern unless you intentionally redesign page assembly.
+0142: Code.gs:198 getJSON(element) is the lightweight browser data API. It exposes three string-selected payloads: Student, Items, and Rentals. The function name is generic, but in practice it is the main read endpoint used by refresh() in the browser.
+0143: 5.3 Student and item CRUD
+0144: The add and edit functions are thin wrappers around spreadsheet mutation. Their job is to validate identity rules, prepare row arrays, and write them back to the correct sheet ranges.
+0145: - Code.gs:226 addStudentsToDatabase(students) normalizes student IDs, derives classYear from the ID prefix, and appends rows to Students columns A:D.
+0146: - Code.gs:273 addItemsToDatabase(items) checks asset-tag uniqueness and appends rows to Items starting at column B.
+0147: - Code.gs:314 editItemsInDatabase(items) expects a JSON string, parses it, finds matching rows by asset tag, and overwrites the item range in place.
+0148: - Code.gs:372 editStudentsInDatabase(students) also expects a JSON string, finds rows by student ID, and overwrites columns A:D.
+0149: - Code.gs:430 deleteItemsFromInventory(assetTags) deletes matching rows from Items based on asset tag matches.
+0150: - Code.gs:456 deleteStudentsFromDatabase(ids) deletes matching student rows after skipping the header row.
+0151: The main maintainability lesson here is that add and edit paths do not share one contract. Adds accept live arrays or objects from the browser; edits accept JSON-encoded arrays. If you introduce a shared abstraction later, this difference is a good place to simplify.
+0152: 5.4 Data mapping helpers
+0153: The read helpers are more important than they look because the rest of the app treats them as the canonical data contract.
+0154: - Code.gs:502 getStudents() reads the Students tab, removes the header row, and returns a dictionary keyed by student ID.
+0155: - Code.gs:536 getItems() reads the Items tab, removes the header row, and returns a dictionary keyed by asset tag.
+0156: - Code.gs:752 getRentals() reads the Rentals tab, removes the header row, and returns a dictionary keyed by rental ID.
+0157: A unique feature of getRentals() is that it attaches a returnRental(returnedBy) method onto each returned rental object. That means a rental record is not only data; it also knows how to write its own return back to the spreadsheet and reset the related item status.
+0158: This is one of the few places where the codebase mixes data and behavior in the same object. It is useful to know because returnRentals() relies on that method rather than rewriting the update logic itself.
+0159: 5.5 Rental creation, return flow, and email receipts
+0160: Rental behavior is implemented as a coordinated update across two spreadsheet tabs plus optional email delivery.
+0161: The create flow is centered on Code.gs:633 createRental(studentID, assetTag, dateToReturn).
+0162: Browser submitScanningMode() decides one code is a student and one is an item
+0163: -&gt; browser calls createRental(studentID, assetTag, dateToReturn)
+0164: -&gt; server checks that the student exists through getStudents()
+0165: -&gt; server checks that the item status is In through getItems()
+0166: -&gt; server computes the next rental ID from getRentals()
+0167: -&gt; server appends a row to Rentals
+0168: -&gt; server updates the matching Items row to status Out and stores the rental ID
+0169: -&gt; server builds HTML email with buildRentalReceiptHTML()
+0170: -&gt; server sends the email through MailApp
+0171: -&gt; browser refreshes tables
+0172: The return flow is centered on Code.gs:885 returnRentals(rentalsToReturn, returnedBy).
+0173: Browser submitScanningMode() in return mode calls returnRentals([itemCode], studentCode)
+0174: -&gt; server loads all rentals with getRentals()
+0175: -&gt; for each open rental whose itemID matches, call rental.returnRental(returnedBy)
+0176: -&gt; returnRental() marks Rentals status Returned and stamps returned-by/date fields
+0177: -&gt; returnRental() resets the matching item in Items to status In and clears rental ID
+0178: -&gt; server builds one return receipt email with buildMultiRentalReceiptHTML()
+0179: -&gt; server emails teacher and CCs the student
+0180: -&gt; browser refreshes tables
+0181: The email helpers live at Code.gs:576 and Code.gs:821. They do not send mail by themselves; they only generate HTML bodies for createRental() and returnRentals().
+0182: Important hardcoded configuration lives inside these rental paths.
+0183: - Teacher email comes from Session.getActiveUser().getEmail().
+0184: - Student email is assembled as s{studentID}@stu.tempeunion.org at Code.gs:713 and Code.gs:906.
+0185: - Date formatting uses Utilities.formatDate() with the script time zone.
+0186: 5.6 Reports and utility helpers
+0187: Code.gs:999 generateReport(reportType, timespanStart, timespanEnd) produces structured table data for the browser-side PDF export flow.
+0188: - itemPopularityUsageReport counts rentals within the requested time window and sorts items by usage.
+0189: - lostItemReport filters items by Lost status and tries to enrich the output from rental history.
+0190: Reports are delivered as JSON with head/body arrays so index.html can hand that object directly to jsPDF AutoTable.
+0191: The remaining small helpers are maintenance-oriented.
+0192: - Code.gs:1133 getSpreadsheetURL() returns the current spreadsheet URL so the browser can populate the Your Database and See Past Rentals links.
+0193: - Code.gs:1137 findMakeModelBasedOnAssetTag(assetTag) is used when opening item details; despite its name, it acts as a spreadsheet lookup helper tied to the current column layout.
+0194: - Code.gs:1104 doSomething() is a scratch or test helper, not a production request path.
+0195: 6. Frontend guide: index.html
+0196: index.html mixes page markup, modal markup, utility elements, and one large JavaScript program. The fastest way to navigate it is to think in zones: layout first, then client state and lifecycle, then operational features such as add/edit flows, scanning, and PDFs.
+0197: Area
+0198: Reference
+0199: What lives there
+0200: Hidden utility elements
+0201: index.html:305
+0202: Canvas for barcode rendering and other non-visible helpers.
+0203: Scanning popup
+0204: index.html:311
+0205: Rental creation and return workflow UI.
+0206: Reports popup
+0207: index.html:407
+0208: Report date range and download controls.
+0209: Shared entity modal
+0210: index.html:490
+0211: Item details, student details, rental details, add-items, and add-students views.
+0212: Navigation and main sections
+0213: index.html:815, 939, 1063, 1233
+0214: Header, nav buttons, item list, rental list, and student list.
+0215: Loading overlay
+0216: index.html:1367
+0217: Global loading state while async calls are running.
+0218: Main JavaScript block
+0219: index.html:1440
+0220: All major client behavior from refresh() onward.
+0221: 6.1 Startup lifecycle and global client state
+0222: The front-end lifecycle begins in two places: showSection() at index.html:1416 controls which major content section is visible, and refresh() at index.html:1548 repopulates all live data.
+0223: The main globals near index.html:1475 are the state anchors for the entire file.
+0224: - students: last fetched student dictionary from the server.
+0225: - items: last fetched item dictionary from the server.
+0226: - isDisabled: whether teacher assistant mode is active.
+0227: - checkedItems and checkedStudents: checkbox selection state for bulk actions.
+0228: - addItemRowIDs and addStudentsRowIDs: track dynamic rows inside the add-item and add-student modal views.
+0229: - scanningModeCodes: small in-memory queue of scanned codes while Rental Mode is active.
+0230: - reportsBeingGenerated: tracks in-flight report exports so duplicate requests can be avoided.
+0231: refresh() is the single most important browser function to understand.
+0232: index.html:1548 refresh()
+0233: -&gt; show loading overlay
+0234: -&gt; clear existing tbody content for items, students, and rentals
+0235: -&gt; fetch students through getJSON("Student")
+0236: -&gt; render students, then fetch rentals and render rentals
+0237: -&gt; fetch items through getJSON("Items") and render items
+0238: -&gt; fetch spreadsheet URL through getSpreadsheetURL()
+0239: -&gt; when all three payloads are ready, hide loading state and restore scroll
+0240: A maintainer should treat refresh() as the browser equivalent of re-syncing the app with the spreadsheet. Most mutations end by calling refresh() rather than trying to patch every visible row by hand.
+0241: 6.2 Rendering pipeline
+0242: The render functions rebuild visible tables from the latest in-memory dictionaries.
+0243: - index.html:2804 renderItems(items) converts the item dictionary into table row HTML, updates checkedItems, and renders a status badge plus a details button for each row.
+0244: - index.html:2918 renderStudents(students) creates rows with checkboxes and details buttons, updating checkedStudents as it goes.
+0245: - index.html:2997 renderRentals(students, rentals) fetches items again from the server, then builds the outstanding-rental table with overdue calculations and a details button.
+0246: Each renderer is tightly coupled to both the front-end data shape and the expected DOM IDs. If you change field names or element IDs, update the corresponding renderer and any related modal logic in the same pass.
+0247: renderRentals() is worth special attention because it does one extra lookup pass: it fetches items again inside the function so it can decorate rentals with school/location context and overdue messaging.
+0248: 6.3 Modal system and CRUD flows
+0249: The shared modal at index.html:490 is the UI shell for multiple tasks. Instead of rendering different dialog components, the file hides and shows different content blocks inside one modal container.
+0250: - openItemDetails() at index.html:2489 opens the item-detail view, decodes the row payload, asks the server for a supplemental lookup, and populates the table cells or select boxes.
+0251: - openStudentDetails() at index.html:2640 opens the student-detail view and fills in the current values.
+0252: - openRentalDetails() at index.html:2571 opens the rental-detail view for read-mostly inspection.
+0253: - openAddItemsView() and openAddStudentsView() switch the modal into bulk-add mode.
+0254: - saveModalEdits() at index.html:2312 is the central save dispatcher for the shared modal.
+0255: Bulk-add flows are split into row-generation and row-save phases.
+0256: - updateAddItemsPopupRows() at index.html:1883 appends editable rows for new item entry.
+0257: - saveAddItemsView() at index.html:2037 validates required asset tags, prevents duplicate entries within the modal, calls addItemsToDatabase(), then generates a barcode PDF for the new items.
+0258: - updateAddStudentsPopupRows() at index.html:1963 appends editable student rows.
+0259: - saveAddStudentsView() at index.html:2148 validates IDs and numeric fields, prevents duplicates within the modal, and calls addStudentsToDatabase().
+0260: Delete behavior is centralized in handleDelete() at index.html:2677 for modal context, while deleteSelectedItems() and deleteSelectedStudents() handle bulk deletion from the tables.
+0261: One navigation-relevant detail: item and student edits travel through editItemsInDatabase() and editStudentsInDatabase() with JSON-stringified arrays. The browser does the stringification in saveModalEdits() before calling the server.
+0262: 6.4 Barcode and report generation in the browser
+0263: Barcode and report exports are purely front-end PDF jobs. The server supplies data, but the browser creates the final files.
+0264: - generateBarcode() at index.html:1692 draws a CODE128 barcode onto the hidden canvas.
+0265: - generateBarcodePDF() at index.html:1707 creates a jsPDF document, repeatedly draws label text plus barcode images, and saves the file locally.
+0266: - generateItemBarcodes() and generateStudentBarcodes() gather selected records and pass them to generateBarcodePDF().
+0267: - generateAndDownloadReport() at index.html:3436 asks the server for report data, then feeds the response into jsPDF AutoTable and saves the finished PDF.
+0268: This division of labor is important for maintainers. If you want to change report contents, edit Code.gs:999. If you want to change report layout, filename, or PDF styling, edit index.html:3436.
+0269: 6.5 Scanning mode flow
+0270: Scanning mode is the operational heart of the front end. It is also the clearest example of the browser making local decisions first, then delegating persistence to the server.
+0271: - openScanningMode() at index.html:3072 shows the popup, focuses the input box, wires key listeners, and prepares the UI for typed or scanned codes.
+0272: - processScanningModeKeyUp() at index.html:3124 watches typing speed to guess whether input is coming from a barcode scanner instead of a person.
+0273: - submitScanningMode() at index.html:3163 accumulates two codes, determines whether each code is a student or item by checking local state, and branches into create or return mode.
+0274: - getCodeType() at index.html:3376 classifies a code using the current in-memory students and items dictionaries.
+0275: - scanningModeFlashAndReset() at index.html:3337 handles the visual success or error feedback and resets the scanning UI.
+0276: Open Rental Mode
+0277: -&gt; openScanningMode() focuses the shared input box
+0278: -&gt; user scans or types two values
+0279: -&gt; submitScanningMode() classifies each value with getCodeType()
+0280: -&gt; if mode is create, prompt for return date and call createRental()
+0281: -&gt; if mode is return, call returnRentals([itemCode], studentCode)
+0282: -&gt; flash success or error state
+0283: -&gt; refresh() reloads visible data from the server
+0284: Maintainer note: scanning mode depends on refresh() having already populated students and items. If those globals are stale or empty, getCodeType() cannot classify codes correctly.
+0285: 6.6 Teacher assistant mode and UI capability reduction
+0286: The teacher assistant or self-checkout mode is not a second application state managed by routes or permissions. Instead, it is a client-side UI reduction mode triggered by the click handler attached at index.html:2420.
+0287: - The handler sets isDisabled = true.
+0288: - It opens Rental Mode immediately and tries to request fullscreen.
+0289: - It removes delete and save buttons from the DOM.
+0290: - It removes elements tagged with edit-button or edit-button-like IDs.
+0291: - It toggles the assistant-mode banner visibility.
+0292: Because the mode physically removes controls from the DOM, a page reload is the cleanest way to return to the full editing interface.
+0293: 7. Setup page guide: setup.html
+0294: setup.html exists for one purpose: let a user bind their account to the correct spreadsheet before the main app loads.
+0295: Reference
+0296: Role
+0297: Notes
+0298: setup.html:112-138
+0299: Visible onboarding UI
+0300: Shows the template link, manual link, spreadsheet input, and submit button.
+0301: setup.html:145 submitURL()
+0302: Configuration submit handler
+0303: Normalizes the entered URL, validates it, calls setInventoryURL(), and tells the user to reload.
+0304: setup.html:169-175
+0305: Enter-key convenience handler
+0306: Lets the user press Enter instead of clicking Submit.
+0307: submitURL() is worth understanding because it explains the entire first-run setup contract.
+0308: User pastes Google Sheets URL
+0309: -&gt; submitURL() strips any query string after ?
+0310: -&gt; validate the URL contains docs.google.com/spreadsheets
+0311: -&gt; call google.script.run.setInventoryURL(url)
+0312: -&gt; server stores the URL in User Properties
+0313: -&gt; UI tells the user to reload so the main app can bind datasheet on the next request
+0314: The setup page is coupled directly to Code.gs:47 setInventoryURL() and Code.gs:87 doGet(). If you change how configuration is stored, those three pieces must move together.
+0315: 8. End-to-end code-flow maps
+0316: These short traces are useful when you are debugging by behavior rather than by file name.
+0317: 8.1 First page load
+0318: Browser request
+0319: -&gt; Code.gs:87 doGet(e)
+0320: -&gt; setup.html or index.html response
+0321: -&gt; index.html main script runs
+0322: -&gt; index.html:1548 refresh()
+0323: -&gt; Code.gs:198 getJSON("Student")
+0324: -&gt; Code.gs:198 getJSON("Items")
+0325: -&gt; Code.gs:198 getJSON("Rentals")
+0326: -&gt; index.html renderStudents/renderItems/renderRentals
+0327: 8.2 Importing students from CSV
+0328: User chooses CSV file in Students section
+0329: -&gt; FileReader parses rows in index.html:1630-1689
+0330: -&gt; client normalizes header presence and ID format
+0331: -&gt; client calls Code.gs:226 addStudentsToDatabase(students)
+0332: -&gt; server appends rows to Students tab
+0333: -&gt; client calls refresh()
+0334: 8.3 Adding items and generating barcodes
+0335: User opens Add Items modal
+0336: -&gt; updateAddItemsPopupRows() creates editable rows
+0337: -&gt; saveAddItemsView() validates and builds itemInfo
+0338: -&gt; client calls Code.gs:273 addItemsToDatabase(itemInfo)
+0339: -&gt; server appends rows to Items tab
+0340: -&gt; client builds barcode data set
+0341: -&gt; generateBarcodePDF() saves local PDF
+0342: -&gt; client refreshes tables
+0343: 8.4 Creating a rental
+0344: openScanningMode()
+0345: -&gt; submitScanningMode()
+0346: -&gt; getCodeType() classifies student vs item
+0347: -&gt; prompt for return date
+0348: -&gt; Code.gs:633 createRental(studentID, assetTag, dateToReturn)
+0349: -&gt; Rentals row appended, Items row updated, email sent
+0350: -&gt; scanningModeFlashAndReset("success")
+0351: -&gt; refresh()
+0352: 8.5 Returning a rental
+0353: openScanningMode() in return mode
+0354: -&gt; submitScanningMode()
+0355: -&gt; Code.gs:885 returnRentals([itemCode], studentCode)
+0356: -&gt; getRentals() returns objects with returnRental() method
+0357: -&gt; rental.returnRental() updates Rentals and Items tabs
+0358: -&gt; return receipt email is sent
+0359: -&gt; refresh()
+0360: 9. Function navigation reference
+0361: Use this section as a fast lookup table after you already understand the architecture.
+0362: 9.1 Backend reference
+0363: Reference
+0364: Inputs and outputs
+0365: Used for
+0366: Code.gs:47 setInventoryURL(url)
+0367: Input: spreadsheet URL string. Output: success or error string.
+0368: Stores per-user spreadsheet configuration during setup.
+0369: Code.gs:61 resetInventoryURL()
+0370: Input: none. Output: none.
+0371: Clears the saved spreadsheet URL so the setup page can appear again.
+0372: Code.gs:83 getSetupPage()
+0373: Input: none. Output: HtmlOutput.
+0374: Returns setup.html for first-run users.
+0375: Code.gs:87 doGet(e)
+0376: Input: request event. Output: HtmlOutput.
+0377: Main web entry point for setup vs main app routing and runtime script injection.
+0378: Code.gs:198 getJSON(element)
+0379: Input: Student, Items, or Rentals. Output: JSON string.
+0380: Primary browser read endpoint used by refresh().
+0381: Code.gs:226 addStudentsToDatabase(students)
+0382: Input: array of student objects. Output: success or error string.
+0383: Bulk-create student rows.
+0384: Code.gs:273 addItemsToDatabase(items)
+0385: Input: array of item objects. Output: success or error string.
+0386: Bulk-create item rows.
+0387: Code.gs:314 editItemsInDatabase(items)
+0388: Input: JSON string of item array. Output: error string or undefined-style success path.
+0389: Update existing item rows in place.
+0390: Code.gs:372 editStudentsInDatabase(students)
+0391: Input: JSON string of student array. Output: error string or undefined-style success path.
+0392: Update existing student rows in place.
+0393: Code.gs:430 deleteItemsFromInventory(assetTags)
+0394: Input: asset-tag array. Output: boolean-style result.
+0395: Bulk-delete item rows.
+0396: Code.gs:456 deleteStudentsFromDatabase(ids)
+0397: Input: student-ID array. Output: boolean-style result.
+0398: Bulk-delete student rows.
+0399: Code.gs:502 getStudents()
+0400: Input: none. Output: dictionary keyed by student ID.
+0401: Builds the canonical in-memory student shape.
+0402: Code.gs:536 getItems()
+0403: Input: none. Output: dictionary keyed by asset tag.
+0404: Builds the canonical in-memory item shape.
+0405: Code.gs:576 buildRentalReceiptHTML(...)
+0406: Input: receipt fields. Output: HTML string.
+0407: Composes the checkout email body.
+0408: Code.gs:633 createRental(studentID, assetTag, dateToReturn)
+0409: Input: student ID, asset tag, return date string. Output: success or error string.
+0410: Creates one rental and updates item status.
+0411: Code.gs:752 getRentals()
+0412: Input: none. Output: dictionary keyed by rental ID.
+0413: Builds rental objects and attaches return behavior.
+0414: Code.gs:821 buildMultiRentalReceiptHTML(...)
+0415: Input: returned-rental summary data. Output: HTML string.
+0416: Composes the return email body.
+0417: Code.gs:885 returnRentals(rentalsToReturn, returnedBy)
+0418: Input: item IDs plus returning student ID. Output: success or failure string.
+0419: Processes returns, updates sheets, and emails receipt.
+0420: Code.gs:999 generateReport(reportType, start, end)
+0421: Input: report type plus date window. Output: JSON string.
+0422: Supplies tabular report data to the browser PDF exporter.
+0423: Code.gs:1133 getSpreadsheetURL()
+0424: Input: none. Output: spreadsheet URL string.
+0425: Lets the browser populate direct links into the spreadsheet.
+0426: Code.gs:1137 findMakeModelBasedOnAssetTag(assetTag)
+0427: Input: asset tag. Output: adjacent sheet value or not-found string.
+0428: Lookup helper used while opening item details.
+0429: 9.2 Frontend reference
+0430: Reference
+0431: Inputs and outputs
+0432: Used for
+0433: index.html:1416 showSection(id, evt)
+0434: Input: section ID and event-like target. Output: none.
+0435: Switches between Items, Rentals, and Students views.
+0436: index.html:1548 refresh()
+0437: Input: none. Output: none.
+0438: Reloads client state from the server and re-renders the page.
+0439: index.html:1692 generateBarcode(data)
+0440: Input: label text plus code. Output: barcode image data URL.
+0441: Renders one CODE128 barcode on the hidden canvas.
+0442: index.html:1707 generateBarcodePDF(info)
+0443: Input: array of label/code pairs. Output: browser-saved PDF.
+0444: Creates printable barcode sheets.
+0445: index.html:1771 generateItemBarcodes()
+0446: Input: none. Output: browser-saved PDF.
+0447: Exports selected item barcodes.
+0448: index.html:1792 deleteSelectedItems()
+0449: Input: none. Output: none.
+0450: Bulk-delete selected items through the server.
+0451: index.html:1867 generateStudentBarcodes()
+0452: Input: none. Output: browser-saved PDF.
+0453: Exports selected student barcodes.
+0454: index.html:1883 updateAddItemsPopupRows(count)
+0455: Input: row count. Output: none.
+0456: Adds editable rows to the add-items modal.
+0457: index.html:1963 updateAddStudentsPopupRows(count)
+0458: Input: row count. Output: none.
+0459: Adds editable rows to the add-students modal.
+0460: index.html:2037 saveAddItemsView()
+0461: Input: none. Output: none.
+0462: Validates new item entries, sends them to the server, and generates barcodes.
+0463: index.html:2148 saveAddStudentsView()
+0464: Input: none. Output: none.
+0465: Validates new student entries and sends them to the server.
+0466: index.html:2312 saveModalEdits()
+0467: Input: none. Output: none.
+0468: Dispatches saves for item, student, and bulk-add modal modes.
+0469: index.html:2489 openItemDetails(fullRow)
+0470: Input: base64-encoded item payload. Output: none.
+0471: Opens and populates the item-details modal.
+0472: index.html:2571 openRentalDetails(fullRow)
+0473: Input: base64-encoded rental payload. Output: none.
+0474: Opens the rental-details modal.
+0475: index.html:2606 openAddItemsView()
+0476: Input: none. Output: none.
+0477: Switches the shared modal into add-items mode.
+0478: index.html:2623 openAddStudentsView()
+0479: Input: none. Output: none.
+0480: Switches the shared modal into add-students mode.
+0481: index.html:2640 openStudentDetails(fullRow)
+0482: Input: student object. Output: none.
+0483: Opens and populates the student-details modal.
+0484: index.html:2677 handleDelete()
+0485: Input: none. Output: none.
+0486: Deletes the current modal entity if allowed.
+0487: index.html:2804 renderItems(items)
+0488: Input: item dictionary. Output: none.
+0489: Builds the item table rows.
+0490: index.html:2918 renderStudents(students)
+0491: Input: student dictionary. Output: none.
+0492: Builds the student table rows.
+0493: index.html:2997 renderRentals(students, rentals)
+0494: Input: student and rental dictionaries. Output: none.
+0495: Builds the outstanding-rental table.
+0496: index.html:3072 openScanningMode()
+0497: Input: none. Output: none.
+0498: Shows rental scanning UI and wires input listeners.
+0499: index.html:3163 submitScanningMode()
+0500: Input: current scanning input plus local state. Output: none.
+0501: Classifies codes and calls create or return server flows.
+0502: index.html:3337 scanningModeFlashAndReset(type, errorMessage)
+0503: Input: success or error state. Output: none.
+0504: Handles visual feedback for rental mode.
+0505: index.html:3376 getCodeType(code)
+0506: Input: scanned code. Output: item, student, notInDatabase, or conflict string.
+0507: Classifies a code using current client dictionaries.
+0508: index.html:3436 generateAndDownloadReport(type, start, end)
+0509: Input: report type and date range. Output: browser-saved PDF.
+0510: Requests report data from the server and renders the PDF.
+0511: index.html:3569 startLoadingAnimation() / 3574 endLoadingAnimation()
+0512: Input: none. Output: none.
+0513: Shows or hides the global loading overlay.
+0514: 10. Change map for future maintainers
+0515: When you need to change behavior, start from the entry point that owns the user interaction, then follow the data path into the server and spreadsheet mapping helpers.
+0516: If you want to change...
+0517: Start here
+0518: Then inspect
+0519: Spreadsheet setup behavior
+0520: setup.html:145 submitURL() and Code.gs:47 setInventoryURL()
+0521: Code.gs:61 resetInventoryURL(), Code.gs:83 getSetupPage(), and Code.gs:87 doGet().
+0522: Which page loads first
+0523: Code.gs:87 doGet(e)
+0524: Code.gs:83 getSetupPage() and the top-level spreadsheetURL/datasheet initialization at Code.gs:21-40.
+0525: Main app layout or navigation
+0526: index.html section markers at 815, 939, 1063, and 1233
+0527: showSection() at index.html:1416 plus the render functions for the section you changed.
+0528: Item fields or item forms
+0529: index.html:2037 saveAddItemsView() and index.html:2489 openItemDetails()
+0530: Code.gs:273 addItemsToDatabase(), Code.gs:314 editItemsInDatabase(), and Code.gs:536 getItems().
+0531: Student fields or student import behavior
+0532: index.html:1630 student file import handler and index.html:2148 saveAddStudentsView()
+0533: Code.gs:226 addStudentsToDatabase(), Code.gs:372 editStudentsInDatabase(), and Code.gs:502 getStudents().
+0534: Rental rules
+0535: index.html:3163 submitScanningMode()
+0536: Code.gs:633 createRental(), Code.gs:752 getRentals(), and Code.gs:885 returnRentals().
+0537: Email subject lines or receipt content
+0538: Code.gs:576 and Code.gs:821 receipt builders
+0539: Code.gs:633 createRental() and Code.gs:885 returnRentals() where MailApp.sendEmail() is called.
+0540: Barcode output
+0541: index.html:1692 generateBarcode() and index.html:1707 generateBarcodePDF()
+0542: index.html:1771 generateItemBarcodes() and index.html:1867 generateStudentBarcodes().
+0543: Report contents or report PDFs
+0544: Code.gs:999 generateReport()
+0545: index.html:3436 generateAndDownloadReport() and the report popup markup near index.html:407.
+0546: Teacher assistant mode behavior
+0547: index.html:2420 enableTeacherAssistantMode click handler
+0548: refresh() at index.html:1548 and any elements tagged with edit-button or related IDs.
+0549: A few habits will keep changes safe.
+0550: - Keep the script-injection markers around index.html:1440 intact unless you intentionally redesign the delivery model.
+0551: - When changing fields, update the spreadsheet, the server-side row mappers, and the front-end render or form code together.
+0552: - When renaming front-end functions, search the HTML for inline onclick references as well as JavaScript callers.
+0553: - After any behavioral change, re-test the full chain: load app, add entity, edit entity, create rental, return rental, and refresh tables.
+0554: 11. Hardcoded configuration and derived configuration
+0555: This codebase mixes hardcoded values and spreadsheet-derived values. Knowing which is which makes maintenance much easier.
+0556: Type
+0557: Where it lives
+0558: Examples
+0559: Hardcoded in HTML
+0560: setup.html and index.html
+0561: Template spreadsheet link at setup.html:119, manual link at setup.html:130, school color map at index.html:1479, and major visible layout structure.
+0562: Hardcoded in server code
+0563: Code.gs
+0564: Student email domain at Code.gs:713 and Code.gs:906, report type names at Code.gs:999, and title strings for served pages.
+0565: Derived from spreadsheet data
+0566: Code.gs read helpers plus render functions
+0567: Student, item, and rental rows transformed by getStudents(), getItems(), getRentals(), then displayed by renderItems(), renderStudents(), and renderRentals().
+0568: Derived from user account context
+0569: Apps Script services
+0570: Session.getActiveUser().getEmail() for teacher email and User Properties for spreadsheet selection.
+0571: 12. Final orientation for a new maintainer
+0572: If you are opening this code for the first time, the shortest path to confidence is:
+0573: - understand doGet(),
+0574: - understand refresh(),
+0575: - understand the spreadsheet row mappers,
+0576: - understand submitScanningMode(),
+0577: - and then trace createRental() and returnRentals().
+0578: Once those pieces make sense, the rest of the file is easier to navigate because almost every feature is a variation on the same pattern: collect input in the browser, call a named server function, update the spreadsheet, then refresh the browser state.
