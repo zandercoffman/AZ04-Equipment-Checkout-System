@@ -308,14 +308,47 @@ This provides details like student names, usernames, and possibly guardian permi
 
   
 
-  <!-- ========== POPUP: REPORTS VIEW ==========
-     UI for generating PDF reports:
-       - Item popularity
-       - Lost item report
-       - Timespan selection
+  
+
+
+
+  <!-- ========== POPUP: LOADING INDICATOR ==========
+     Small floating panel showing currently generating reports
 ============================================ -->
-  <div id="reports-view-popup"
-    class="hidden fixed top-0 left-0 z-50 w-full h-full flex justify-center bg-black overflow-y-scroll bg-opacity-50">
+  <div id="generatingReportsIndicator" style="visibility: hidden;">
+    <!--HTML representing each report is added here using JS-->
+  </div>
+
+
+  <!-- ========== POPUP: ENTITY DETAILS ==========
+     Shared modal for viewing/editing:
+       - Item details
+       - Rental details
+       - Student details
+       - Add new items/students
+     Note: Only one section is visible at a time.
+============================================ -->
+  <div id="popup-modal"
+    class="hidden fixed top-0 left-0 z-50 w-full h-full flex items-center justify-center bg-black bg-opacity-50 overflow-y-scroll">
+    <div class="bg-white rounded-xl shadow-lg p-6 h-fit"
+      style="width: 95vw; min-height: 95vh; position: absolute; left: 0vw; top: 0vw; margin-left: 2.5vw; margin-right: 2.5vw; margin-top: 2.5vh; margin-bottom: 2.5vh;">
+
+
+      <!--Title shown in the popup, depending on which section is visible this title is updating using JS-->
+      <h3 class="text-2xl font-semibold mb-4" id="popup-modal-title">CATAGORY Details</h3>
+
+
+
+
+
+
+      <!-- ========== POPUP: REPORTS VIEW ==========
+      UI for generating PDF reports:
+        - Item popularity
+        - Lost item report
+        - Timespan selection
+        ============================================ -->
+  <div id="reports-view-popup" class="hidden fixed top-0 left-0 z-50 w-full h-full flex justify-center bg-black overflow-y-scroll bg-opacity-50">
     <div class="bg-white rounded-xl shadow-lg p-6 w-full flex flex-column justify-between items-center"
       style="width: 95vw; min-height: 95vh; height: fit-content; text-align: center; margin-top: 20px; margin-bottom: 20px;">
       <h3 class="text-2xl font-semibold mb-4" id="scanning-mode-popup-title" style="font-size: 2em;">Reports View</h3>
@@ -366,48 +399,23 @@ This provides details like student names, usernames, and possibly guardian permi
       </div>
 
 
-      <!--Close popup button-->
+      <!--Close Reports View popup button-->
       <div class="w-full flex flex-row justify-between items-center">
         <div class="flex flex-row gap-4 items-center" style="width: 100%;">
           <div class="flex flex-row gap-2 items-center" style="width: 100%;">
             <button id="close-report-view-popup" onclick="closeReportsView()" style="margin-left: auto; margin-right: auto;" class="mt-4 flex flex-row gap-1 bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600 items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 <span>Close</span>
-              </button>
+            </button>
           </div>
         </div>
       </div>
     </div>
   </div>
-  </div>
 
 
 
-  <!-- ========== POPUP: LOADING INDICATOR ==========
-     Small floating panel showing currently generating reports
-============================================ -->
-  <div id="generatingReportsIndicator" style="visibility: hidden;">
-    <!--HTML representing each report is added here using JS-->
-  </div>
-
-
-  <!-- ========== POPUP: ENTITY DETAILS ==========
-     Shared modal for viewing/editing:
-       - Item details
-       - Rental details
-       - Student details
-       - Add new items/students
-     Note: Only one section is visible at a time.
-============================================ -->
-  <div id="popup-modal"
-    class="hidden fixed top-0 left-0 z-50 w-full h-full flex items-center justify-center bg-black bg-opacity-50 overflow-y-scroll">
-    <div class="bg-white rounded-xl shadow-lg p-6 h-fit"
-      style="width: 95vw; min-height: 95vh; position: absolute; left: 0vw; top: 0vw; margin-left: 2.5vw; margin-right: 2.5vw; margin-top: 2.5vh; margin-bottom: 2.5vh;">
-
-
-      <!--Title shown in the popup, depending on which section is visible this title is updating using JS-->
-      <h3 class="text-2xl font-semibold mb-4" id="popup-modal-title">CATAGORY Details</h3>
-
+  
       <!-- ========== POPUP: SCANNING MODE ==========
      UI for scanning or typing IDs to create/return rentals.
      Features:
@@ -450,7 +458,7 @@ This provides details like student names, usernames, and possibly guardian permi
           </div>
 
 
-          <!--Close button-->
+          <!--Close Scanning Mode button-->
           <div class="flex flex-row gap-4">
             <div class="flex flex-row gap-2">
               <button id="close-scanning-mode-popup" onclick="closeScanningMode()" class="mt-4 flex flex-row gap-1 bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600">
@@ -2460,6 +2468,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("popup-add-students-content").classList.add("hidden");
     document.getElementById("popup-rental-details-content").classList.add("hidden");
     document.getElementById("popup-scanning-mode").classList.add("hidden");
+    document.getElementById("reports-view-popup").classList.add("hidden");
 
     popupModal.getElementsByTagName("div")[0].scrollIntoView();
 
@@ -3404,6 +3413,7 @@ endLoadingAnimation();
   }
   function closeReportsView() {
     document.getElementById(`reports-view-popup`).classList.add(`hidden`);
+    closeModalDialog();
     restorePageScroll();
   }
 
