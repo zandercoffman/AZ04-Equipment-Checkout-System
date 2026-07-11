@@ -1450,6 +1450,7 @@ document.addEventListener('DOMContentLoaded', () => {
        - Uses google.script.run.getJSON(...) to fetch data from Google Apps Script backend
 ============================================= -->
   <script>
+    console.log("started executing main JS");
     //if the browser console says error at userAppCodePanel:LINE_NUMBER, to find the error take LINE_NUMBER and add the line number of this comment (around 584), this will get you to approximately the line of the error
   
   
@@ -3577,6 +3578,7 @@ endLoadingAnimation();
     document.getElementById("loading").style.visibility = "hidden";
     restorePageScroll();
   }
+  console.log("finished executing main JS");
   </script>
   <!-- End of js to remove and insert at runtime-->
 
