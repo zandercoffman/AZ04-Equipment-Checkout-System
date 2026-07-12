@@ -104,7 +104,8 @@ function include3rdPartyLibrary(fileName) {
       console.log("Started executing ${fileName}");
       (function (){
         
-        let libraryContent = window.atob("${Utilities.base64Encode(libraryContentAsString)}");  //encode to base64 to pass to client to avoid Google Apps Script santizing scripts that assign strings with "https://somewebsite.exampledomain" to variables (previously some scripts with URLS in them were having everything on a line after https:// truncated (including code after the string with the URL was done))). Then decode on the client. See encoding documentation on https://developers.google.com/apps-script/reference/utilities/utilities
+        let decoder = new TextDecoder();
+        let libraryContent = decoder.decode(Uint8Array.fromBase64("${Utilities.base64Encode(libraryContentAsString, Utilities.Charset.UTF_8)}"));  //encode to base64 to pass to client to avoid Google Apps Script santizing scripts that assign strings with "https://somewebsite.exampledomain" to variables (previously some scripts with URLS in them were having everything on a line after https:// truncated (including code after the string with the URL was done))). Then decode on the client. See encoding documentation on https://developers.google.com/apps-script/reference/utilities/utilities
 
         libraryContent = \`
         console.log("Started executing ${fileName} inner");
@@ -113,6 +114,7 @@ function include3rdPartyLibrary(fileName) {
 
         let libraryParentElement = document.createElement("script");
         
+
         libraryParentElement.innerHTML = libraryContent; //insert the library content directly into the libraryParentElement script tag. It should then be parsed by the browser and run
 
         document.currentScript.parentNode.appendChild(libraryParentElement);
