@@ -328,6 +328,8 @@ This provides details like student names, usernames, and possibly guardian permi
        - Add new items/students
      Note: Only one section is visible at a time.
 ============================================ -->
+
+
   <div id="popup-modal"
     class="hidden fixed top-0 left-0 z-50 w-full h-full flex items-center justify-center bg-black bg-opacity-50 overflow-y-scroll">
     <div class="bg-white rounded-xl shadow-lg p-6 h-fit"
@@ -1574,6 +1576,7 @@ document.addEventListener('DOMContentLoaded', () => {
       //render the students and items
 
       checkedStudents = {} //clear this list which gets populated by rendering students
+      
       google.script.run.withSuccessHandler((data) => {
         students = JSON.parse(data)
         renderStudents(students)
@@ -3116,7 +3119,7 @@ endLoadingAnimation();
   function openReportsView() {
 
     disablePageScroll()
-
+    document.getElementById(`popup-modal`).classList.remove(`hidden`);
     document.getElementById(`reports-view-popup`).classList.remove(`hidden`);
   }
 
