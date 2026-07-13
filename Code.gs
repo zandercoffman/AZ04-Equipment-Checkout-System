@@ -176,8 +176,6 @@ function getJSON(element) {
     case "Items":
       return JSON.stringify(getItems());
     case "Rentals":
-      Logger.log("Getting rental info")
-      Logger.log("Rental Info:" + JSON.stringify(getRentals()))
       return JSON.stringify(getRentals())
     default:
       return ""
@@ -198,7 +196,6 @@ function createRental(itemID, studentID) {
 // REMEMBER IT DOES NOT HAVE THE "S" in the name
 //take a paramater students as input (this should be of the structure [{"id": "ID1", "classYear": "CLASS_YEAR1", "period": "PERIOD1", "name": "NAME1"}, {"id": "ID2", "classYear": "CLASS_YEAR2", "period": "PERIOD2", "name": "NAME2"}])
 function addStudentsToDatabase(students) {
-  Logger.log("AHHHHH: " + JSON.stringify(students));
   let currentStudents = Object.keys(getStudents());
 
   //check that there are no errors before editing the database
@@ -344,9 +341,9 @@ function editItemsInDatabase(items) {
 
 //take a paramater students as input (this should be of the structure [{id: "ID", classYear: "CLASSYEAR", period: "PERIOD", name: "NAME"}])
 function editStudentsInDatabase(students) {
-  Logger.log(students)
+  // Logger.log(students)
   students = JSON.parse(students)
-  Logger.log(students)
+  // Logger.log(students)
 
   let currentStudents = Object.keys(getStudents());
 
@@ -431,7 +428,7 @@ function deleteItemFromInventory(assetTag) {
 
 
 function deleteStudentsFromDatabase(ids) {
-  Logger.log(ids)
+  // Logger.log(ids)
   const sheet = datasheet.getSheetByName("Students");
   var range = sheet.getDataRange();
   var values = range.getValues();
@@ -789,8 +786,8 @@ function getRentals() {
 
   //for each rental in the table convert the data into an easier to use format and append it to the rentals dictonary
   for (rental of dataToConvert) {
-    Logger.log("rentalInfo: ")
-    Logger.log(rental[3])
+    // Logger.log("rentalInfo: ")
+    // Logger.log(rental[3])
     rentals[rental[0]] =
     {
       rentalID: Number.parseInt(rental[0]),
@@ -1065,8 +1062,8 @@ function generateReport(reportType, timespanStart, timespanEnd) {
 
 
       Object.keys(itemStatistics).forEach((id) => {
-        Logger.log(id)
-        Logger.log(items)
+        // Logger.log(id)
+        // Logger.log(items)
         output["body"].push([items[id]["assetTagNumber"], items[id]["makeModel"], items[id]["itemDescription"], itemStatistics[id]]);
       })
     }
@@ -1079,11 +1076,11 @@ function generateReport(reportType, timespanStart, timespanEnd) {
       let itemStatistics = [];
       let error = "";
       Object.keys(items).forEach((key) => {
-        Logger.log(items[key]["status"])
+        // Logger.log(items[key]["status"])
         if (items[key]["status"] == "Lost") {
 
-          Logger.log(items[key]["rentalID"])
-          Logger.log(items[key])
+          // Logger.log(items[key]["rentalID"])
+          // Logger.log(items[key])
 
           try {
             itemStatistics.push([key, items[key]["makeModel"], items[key]["itemDescription"], rentals[items[key]["rentalID"]]["checkedOutTo"], rentals[items[key]["rentalID"]]["dateCheckedOut"], rentals[items[key]["rentalID"]]["dateExpectedToReturn"]]);
@@ -1142,7 +1139,7 @@ function doSomething() {
 
   //Logger.log(addStudentsToDatabase([{id: "55555", classYear: "5555", period: "5", name: "five"}, {id: "77777", classYear: "7777", period: "7", name: "seven"}]))
 
-  Logger.log(getPage('addStudents'));
+  // Logger.log(getPage('addStudents'));
 
   output = "I ran";
 

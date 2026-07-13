@@ -1674,7 +1674,6 @@ document.addEventListener('DOMContentLoaded', () => {
           students = students.filter((val, index) => index !== 0)
         }
 
-        console.log("Parsed students:", students);
         startLoadingAnimation();
         google.script.run.withFailureHandler((err) => {
           alert(`There was a problem in importing the students. Error: ${JSON.stringify(err)}`)
@@ -1811,8 +1810,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let humanList = ""
 
     selectedItems.forEach((item) => {
-      console.log(item)
-      console.log(humanList)
       humanList+= " " + String(item) + ","
     })
     humanList=humanList.slice(0,humanList.length-1) //remove the extra "," at the end of the list/string
@@ -1836,8 +1833,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let humanList = ""
 
     selectedStudents.forEach((student) => {
-      console.log(student)
-      console.log(humanList)
       humanList+= " " + String(student) + ","
     })
     humanList=humanList.slice(0,humanList.length-1) //remove the extra "," at the end of the list/string
@@ -2032,10 +2027,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function resizeTextAreaToFitContent(id) {
     let textAreaToResize = document.getElementById(id);
     textAreaToResize.style.height = "auto";
-    console.log(textAreaToResize.scrollHeight)
-    console.log(textAreaToResize.scrollHeight + "px")
     textAreaToResize.style.height = textAreaToResize.scrollHeight + "px";
-    console.log(textAreaToResize.style.height)
     
   }
   function removeAddItemsPopupRow(id) {
@@ -2050,7 +2042,6 @@ document.addEventListener('DOMContentLoaded', () => {
     //make load icon visible
     startLoadingAnimation();
 
-    console.log(addItemRowIDs)
 
     //get and verify valid values
     addItemRowIDs.forEach((id) => {
@@ -2078,8 +2069,6 @@ document.addEventListener('DOMContentLoaded', () => {
         school: document.getElementById(`${id}-school-input`).value
       }
       
-      console.log(rowInfo.cost)
-
     
 
       itemInfo.push(rowInfo);
@@ -2109,7 +2098,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     else {
 
-      console.log(itemInfo)
       //send the info to the backend for processing
       google.script.run.withSuccessHandler((data) => {
         switch (data) {
@@ -2150,7 +2138,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }).addItemsToDatabase(itemInfo);
     }
-    console.log(itemInfo)
   }
 
   function saveAddStudentsView() {
@@ -2193,7 +2180,6 @@ document.addEventListener('DOMContentLoaded', () => {
       let periodValue = document.getElementById(`${id}-period-input`).value;
       let period = null;
 
-      console.log(periodValue)
       if (periodValue == "") {
         period = null;
       }
@@ -2214,8 +2200,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let classYearValue = document.getElementById(`${id}-classYear-input`).value;
       let classYear = null;
-      console.log("classYear: " + classYearValue);
-      console.log(classYearValue)
       if (classYearValue == "") {
         classYear = null;
       }
@@ -2270,7 +2254,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     else {
       
-      console.log(studentInfo)
       //send the info to the backend for processing
       google.script.run.withSuccessHandler((data) => {
         switch (data) {
@@ -2299,7 +2282,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }).addStudentsToDatabase(studentInfo);
     }
-    console.log(studentInfo)
   }
   let selectedModalStudentID = ''
 
@@ -2346,7 +2328,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         google.script.run.withSuccessHandler((data) => {
-          console.log(data)
           refresh()
         }).editItemsInDatabase(JSON.stringify([dataToWrite]));
 
@@ -2377,7 +2358,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         startLoadingAnimation()
         google.script.run.withSuccessHandler((data) => {
-          console.log(data)
           refresh()
         }).editStudentsInDatabase(JSON.stringify([dataToWrite]));
         
@@ -2519,7 +2499,6 @@ endLoadingAnimation();
      const popupItemDetailsTable = document.getElementById("popup-item-details-table");
     selectedModalItemID = fullRow[3];
 
-    console.log(JSON.stringify(items, null, 0))
     popupItemDetailsTable.querySelectorAll('tr').forEach(function(row, index) {
       const secondCell = row.children[1];
 
@@ -2771,22 +2750,17 @@ endLoadingAnimation();
     }
     else {
       
-      console.log(date)
       //remove unnessesary zeros, for example 2024-03-02 -> 2024-3-2
       date = date.replace("/", "-")
       date = date.replace("\\", "-")
       date = date.split("-")
-      console.log(date)
       dateTemp = [];
       date.forEach( (str) => {
-        console.log("a: "+ str)
         dateTemp.push(String(Number(str))) //remove leading zeros
       })
       date = dateTemp;
-      console.log("AH: " + date)
       date = date.join("-")
 
-      console.log(date);
 
       date = new Date(date);
 
@@ -2917,7 +2891,6 @@ endLoadingAnimation();
  
 
   function renderStudents(students) {
-      console.log(JSON.stringify(students))
       const outputTable = document.getElementById("student-table");
       let tbody = outputTable.querySelector("tbody");
       tbody.innerHTML = ``; 
@@ -2936,7 +2909,6 @@ endLoadingAnimation();
         const checkbox = document.createElement("td")
         checkbox.className="p-4 align-middle [&:has([role=checkbox])]:pr-0"
         checkbox.innerHTML=`<input type="checkbox" id="item-checkbox-${id}" onclick="checkedStudents['${id}'] = !checkedStudents['${id}'];" />`
-        console.log(`<input type="checkbox" id="item-checkbox-${id}" onclick="checkedStudents['${id}'] = !checkedStudents['${id}'];" />`)
         const cellId = document.createElement("td");
         cellId.className = "p-4 align-middle [&:has([role=checkbox])]:pr-0"
         cellId.textContent = student.id;
@@ -3000,8 +2972,6 @@ endLoadingAnimation();
       let tbody = outputTable.querySelector("tbody");
       //tbody.innerHTML = ``; 
 
-      console.log("students: ", students)
-      console.log("rentals: ", rentals)
 
        google.script.run.withSuccessHandler((data) => {
         let items = JSON.parse(data)
@@ -3027,7 +2997,6 @@ endLoadingAnimation();
             // The item has been found
             let item = findItemStatus[0]; // You can access the first match, if there are multiple
             school = item.school;
-            console.log(item);
           } else {
             // Item not found
             console.log("Item not found.");
@@ -3101,7 +3070,6 @@ endLoadingAnimation();
     /*Modified from https://www.w3schools.com/howto/howto_js_trigger_button_enter.asp */
     scanningModeInputBox.addEventListener("keypress", function(event) {
     
-    console.log("event.key: " + event.key)
     // If the user presses the "Enter" key on the keyboard
     if (event.key == "Enter") {
       // Cancel the default action, if needed
@@ -3130,7 +3098,7 @@ endLoadingAnimation();
     let currentTime = Date.now()
     
 
-    console.log(currentTime - previousTime)
+    // console.log(currentTime - previousTime)
 
     //if a user types two characters within 50ms of eachother update the quick key press counter
     if (currentTime - previousTime < 70) {
@@ -3215,8 +3183,8 @@ endLoadingAnimation();
       let code2Type = getCodeType(scanningModeCodesTemp[1])
 
       //once that is done, make sure there are no errors and try to create a new rental
-      console.log("code1Type: " + code1Type);
-      console.log("code2Type: " + code2Type);
+      // console.log("code1Type: " + code1Type);
+      // console.log("code2Type: " + code2Type);
 
 
       switch (code1Type)
@@ -3272,7 +3240,7 @@ endLoadingAnimation();
         return 100
       }
 
-      console.log("Student: " + studentCode + "     Item: " + itemCode )
+      // console.log("Student: " + studentCode + "     Item: " + itemCode )
 
 
 
@@ -3498,7 +3466,7 @@ endLoadingAnimation();
         //let wrappedText = doc.splitTextToSize(JSON.stringify(data), 200)
         //doc.text(wrappedText, 5, 5);  
 
-        console.log(data)
+        // console.log(data)
         // Or use javascript directly:
         
         doc.autoTable(data)
