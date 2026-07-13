@@ -35,6 +35,7 @@
      - jsPDF & autotable for PDF generation
 ======================================= -->
 
+  
   <!--Download Tailwind CSS (CSS Framework)-->
   <?!= include3rdPartyLibrary('tailwind-css'); ?> <!--JS script-->
 
@@ -46,6 +47,8 @@
   <?!= include3rdPartyLibrary('jsbarcode'); ?> <!--JS script-->
 
   <!--Download google fonts-->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
     rel="stylesheet">
 
@@ -77,7 +80,7 @@ This provides details like student names, usernames, and possibly guardian permi
   -->
 
 
->
+
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
@@ -303,7 +306,117 @@ This provides details like student names, usernames, and possibly guardian permi
 ============================================== -->
   <canvas width="1000px" height="1000px" id="barcodeCanvas" style="display: none"></canvas>
 
-  <!-- ========== POPUP: SCANNING MODE ==========
+  
+
+  
+
+
+
+  <!-- ========== POPUP: LOADING INDICATOR ==========
+     Small floating panel showing currently generating reports
+============================================ -->
+  <div id="generatingReportsIndicator" style="visibility: hidden;">
+    <!--HTML representing each report is added here using JS-->
+  </div>
+
+
+  <!-- ========== POPUP: ENTITY DETAILS ==========
+     Shared modal for viewing/editing:
+       - Item details
+       - Rental details
+       - Student details
+       - Add new items/students
+     Note: Only one section is visible at a time.
+============================================ -->
+  <div id="popup-modal"
+    class="hidden fixed top-0 left-0 z-50 w-full h-full flex items-center justify-center bg-black bg-opacity-50 overflow-y-scroll">
+    <div class="bg-white rounded-xl shadow-lg p-6 h-fit"
+      style="width: 95vw; min-height: 95vh; position: absolute; left: 0vw; top: 0vw; margin-left: 2.5vw; margin-right: 2.5vw; margin-top: 2.5vh; margin-bottom: 2.5vh;">
+
+
+      <!--Title shown in the popup, depending on which section is visible this title is updating using JS-->
+      <h3 class="text-2xl font-semibold mb-4" id="popup-modal-title">CATAGORY Details</h3>
+
+
+
+
+
+
+      <!-- ========== POPUP: REPORTS VIEW ==========
+      UI for generating PDF reports:
+        - Item popularity
+        - Lost item report
+        - Timespan selection
+        ============================================ -->
+  <div id="reports-view-popup" class="hidden fixed top-0 left-0 z-50 w-full h-full flex justify-center bg-black overflow-y-scroll bg-opacity-50">
+    <div class="bg-white rounded-xl shadow-lg p-6 w-full flex flex-column justify-between items-center"
+      style="width: 95vw; min-height: 95vh; height: fit-content; text-align: center; margin-top: 20px; margin-bottom: 20px;">
+      <h3 class="text-2xl font-semibold mb-4" id="scanning-mode-popup-title" style="font-size: 2em;">Reports View</h3>
+
+
+      <!--Section for chosing what data to include in reports-->
+      <div class="report-view-row items-center flex flex-column">
+        <div class="report-view-row-header items-center flex flex-column">
+          <h3 style="font-size: 2em; margin: 20px;">Timespan</h3>
+          <p style="max-width: 30%; text-align: center;">Select the start and end dates the report should be based on.
+            Click a calender icon to select a date, or click on mm/dd/yyyy to type a date.</p>
+        </div>
+        <div class="report-view-button-div">
+          <p style="font-size: 1.5em;">Start</p>
+          <input id="report-view-timespanStart-input" type="date">
+
+          <p style="font-size: 1.5em;">End</p>
+          <input id="report-view-timespanEnd-input" type="date">
+        </div>
+      </div>
+
+      <!--Section for chosing which report types to download-->
+      <div id="report-download-buttons" class="flex flex-column justify-between; items-center;" style="gap: 10px;">
+        <h3 style="font-size: 2em; margin: 20px;">Select Report Type</h3>
+        <div class="report-view-row">
+          <div class="report-view-row-header">
+            <h3>Item Popularity/Usage Report</h3>
+          </div>
+          <div class="report-view-button-div">
+            <button onclick="generateAndDownloadReport('itemPopularityUsageReport', document.getElementById('report-view-timespanStart-input').value, document.getElementById('report-view-timespanEnd-input').value)" class="report-view-button inline-flex flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+              <span>Generate and Download</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="report-view-row">
+          <div class="report-view-row-header">
+            <h3>Lost Item Report</h3>
+          </div>
+          <div class="report-view-button-div">
+            <button onclick="generateAndDownloadReport('lostItemReport', document.getElementById('report-view-timespanStart-input').value, document.getElementById('report-view-timespanEnd-input').value)" class="report-view-button inline-flex flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+              <span>Generate and Download</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+
+      <!--Close Reports View popup button-->
+      <div class="w-full flex flex-row justify-between items-center">
+        <div class="flex flex-row gap-4 items-center" style="width: 100%;">
+          <div class="flex flex-row gap-2 items-center" style="width: 100%;">
+            <button id="close-report-view-popup" onclick="closeReportsView()" style="margin-left: auto; margin-right: auto;" class="mt-4 flex flex-row gap-1 bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600 items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                <span>Close</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  
+      <!-- ========== POPUP: SCANNING MODE ==========
      UI for scanning or typing IDs to create/return rentals.
      Features:
        - Mode selection (Create Rentals / Return Rentals)
@@ -345,7 +458,7 @@ This provides details like student names, usernames, and possibly guardian permi
           </div>
 
 
-          <!--Close button-->
+          <!--Close Scanning Mode button-->
           <div class="flex flex-row gap-4">
             <div class="flex flex-row gap-2">
               <button id="close-scanning-mode-popup" onclick="closeScanningMode()" class="mt-4 flex flex-row gap-1 bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600">
@@ -398,108 +511,6 @@ This provides details like student names, usernames, and possibly guardian permi
       </div>
     </div>
   </div>
-
-  <!-- ========== POPUP: REPORTS VIEW ==========
-     UI for generating PDF reports:
-       - Item popularity
-       - Lost item report
-       - Timespan selection
-============================================ -->
-  <div id="reports-view-popup"
-    class="hidden fixed top-0 left-0 z-50 w-full h-full flex justify-center bg-black overflow-y-scroll bg-opacity-50">
-    <div class="bg-white rounded-xl shadow-lg p-6 w-full flex flex-column justify-between items-center"
-      style="width: 95vw; min-height: 95vh; height: fit-content; text-align: center; margin-top: 20px; margin-bottom: 20px;">
-      <h3 class="text-2xl font-semibold mb-4" id="scanning-mode-popup-title" style="font-size: 2em;">Reports View</h3>
-
-
-      <!--Section for chosing what data to include in reports-->
-      <div class="report-view-row items-center flex flex-column">
-        <div class="report-view-row-header items-center flex flex-column">
-          <h3 style="font-size: 2em; margin: 20px;">Timespan</h3>
-          <p style="max-width: 30%; text-align: center;">Select the start and end dates the report should be based on.
-            Click a calender icon to select a date, or click on mm/dd/yyyy to type a date.</p>
-        </div>
-        <div class="report-view-button-div">
-          <p style="font-size: 1.5em;">Start</p>
-          <input id="report-view-timespanStart-input" type="date">
-
-          <p style="font-size: 1.5em;">End</p>
-          <input id="report-view-timespanEnd-input" type="date">
-        </div>
-      </div>
-
-      <!--Section for chosing which report types to download-->
-      <div id="report-download-buttons" class="flex flex-column justify-between; items-center;" style="gap: 10px;">
-        <h3 style="font-size: 2em; margin: 20px;">Select Report Type</h3>
-        <div class="report-view-row">
-          <div class="report-view-row-header">
-            <h3>Item Popularity/Usage Report</h3>
-          </div>
-          <div class="report-view-button-div">
-            <button onclick="generateAndDownloadReport('itemPopularityUsageReport', document.getElementById('report-view-timespanStart-input').value, document.getElementById('report-view-timespanEnd-input').value)" class="report-view-button inline-flex flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
-              <span>Generate and Download</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="report-view-row">
-          <div class="report-view-row-header">
-            <h3>Lost Item Report</h3>
-          </div>
-          <div class="report-view-button-div">
-            <button onclick="generateAndDownloadReport('lostItemReport', document.getElementById('report-view-timespanStart-input').value, document.getElementById('report-view-timespanEnd-input').value)" class="report-view-button inline-flex flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
-              <span>Generate and Download</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-
-      <!--Close popup button-->
-      <div class="w-full flex flex-row justify-between items-center">
-        <div class="flex flex-row gap-4 items-center" style="width: 100%;">
-          <div class="flex flex-row gap-2 items-center" style="width: 100%;">
-            <button id="close-report-view-popup" onclick="closeReportsView()" style="margin-left: auto; margin-right: auto;" class="mt-4 flex flex-row gap-1 bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600 items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                <span>Close</span>
-              </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  </div>
-
-
-
-  <!-- ========== POPUP: LOADING INDICATOR ==========
-     Small floating panel showing currently generating reports
-============================================ -->
-  <div id="generatingReportsIndicator" style="visibility: hidden;">
-    <!--HTML representing each report is added here using JS-->
-  </div>
-
-
-  <!-- ========== POPUP: ENTITY DETAILS ==========
-     Shared modal for viewing/editing:
-       - Item details
-       - Rental details
-       - Student details
-       - Add new items/students
-     Note: Only one section is visible at a time.
-============================================ -->
-  <div id="popup-modal"
-    class="hidden fixed top-0 left-0 z-50 w-full h-full flex items-center justify-center bg-black bg-opacity-50 overflow-y-scroll">
-    <div class="bg-white rounded-xl shadow-lg p-6 h-fit"
-      style="width: 95vw; min-height: 95vh; position: absolute; left: 0vw; top: 0vw; margin-left: 2.5vw; margin-right: 2.5vw; margin-top: 2.5vh; margin-bottom: 2.5vh;">
-
-
-      <!--Title shown in the popup, depending on which section is visible this title is updating using JS-->
-      <h3 class="text-2xl font-semibold mb-4" id="popup-modal-title">CATAGORY Details</h3>
-
-
 
       <!-- Item details section here -->
 
@@ -1439,6 +1450,7 @@ document.addEventListener('DOMContentLoaded', () => {
        - Uses google.script.run.getJSON(...) to fetch data from Google Apps Script backend
 ============================================= -->
   <script>
+    console.log("started executing main JS");
     //if the browser console says error at userAppCodePanel:LINE_NUMBER, to find the error take LINE_NUMBER and add the line number of this comment (around 584), this will get you to approximately the line of the error
   
   
@@ -2451,6 +2463,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     popupModal.classList.add("hidden");
 
+    //hide all the child popup windows
+    document.getElementById("popup-student-details-content").classList.add("hidden");
+    document.getElementById("popup-add-items-content").classList.add("hidden");
+    document.getElementById("popup-add-students-content").classList.add("hidden");
+    document.getElementById("popup-rental-details-content").classList.add("hidden");
+    document.getElementById("popup-scanning-mode").classList.add("hidden");
+    document.getElementById("reports-view-popup").classList.add("hidden");
+
     popupModal.getElementsByTagName("div")[0].scrollIntoView();
 
     restorePageScroll() //allow scrolling the main page contents again;
@@ -2490,10 +2510,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fullRow[2] = data
 endLoadingAnimation();
         document.getElementById("popup-modal-title").innerHTML = "Item Details";
-    document.getElementById("popup-student-details-content").classList.add("hidden");
-    document.getElementById("popup-add-items-content").classList.add("hidden");
-    document.getElementById("popup-add-students-content").classList.add("hidden");
-    document.getElementById("popup-rental-details-content").classList.add("hidden");
+    
     document.getElementById("popup-item-details-content").classList.remove("hidden");
 
      const popupItemDetailsTable = document.getElementById("popup-item-details-table");
@@ -2571,10 +2588,7 @@ endLoadingAnimation();
     fullRow = JSON.parse(atob(fullRow));
     
     document.getElementById("popup-modal-title").innerHTML = "Rental Details";
-    document.getElementById("popup-student-details-content").classList.add("hidden");
-    document.getElementById("popup-add-items-content").classList.add("hidden")
-    document.getElementById("popup-add-students-content").classList.add("hidden")
-    document.getElementById("popup-item-details-content").classList.add("hidden")
+    
     document.getElementById("popup-rental-details-content").classList.remove("hidden")
 
     const popupRentalDetailsTable = document.getElementById("popup-rental-details-table");
@@ -2602,10 +2616,7 @@ endLoadingAnimation();
 
   
     document.getElementById("popup-modal-title").innerHTML = "Add Items View";
-    document.getElementById("popup-student-details-content").classList.add("hidden");
-    document.getElementById("popup-item-details-content").classList.add("hidden");
-    document.getElementById("popup-add-students-content").classList.add("hidden")
-    document.getElementById("popup-rental-details-content").classList.add("hidden")
+    
     document.getElementById("popup-add-items-content").classList.remove("hidden")
 
     document.getElementById("deleteButton").style.display="none";
@@ -2619,10 +2630,7 @@ endLoadingAnimation();
 
   
     document.getElementById("popup-modal-title").innerHTML = "Add Students View";
-    document.getElementById("popup-student-details-content").classList.add("hidden");
-    document.getElementById("popup-item-details-content").classList.add("hidden");
-    document.getElementById("popup-add-items-content").classList.add("hidden")
-    document.getElementById("popup-rental-details-content").classList.add("hidden")
+    
     document.getElementById("popup-add-students-content").classList.remove("hidden")
 
     document.getElementById("deleteButton").style.display="none";
@@ -2635,10 +2643,7 @@ endLoadingAnimation();
     disablePageScroll();
 
     document.getElementById("popup-modal-title").innerHTML = "Student Details";
-    document.getElementById("popup-item-details-content").classList.add("hidden");
-    document.getElementById("popup-add-items-content").classList.add("hidden")
-    document.getElementById("popup-add-students-content").classList.add("hidden")
-    document.getElementById("popup-rental-details-content").classList.add("hidden")
+    
     document.getElementById("popup-student-details-content").classList.remove("hidden")
 
     const popupStudentDetailsTable = document.getElementById("popup-student-details-table");
@@ -3065,6 +3070,10 @@ endLoadingAnimation();
   function openScanningMode() {
     disablePageScroll();
 
+    document.getElementById("popup-modal-title").innerHTML = "Item Details";
+
+    document.getElementById("popup-modal").classList.remove("hidden");
+
     document.getElementById(`scanning-mode-popup`).classList.remove(`hidden`);
     let scanningModeInputBox = document.getElementById(`scanning-mode-input-box`);
 
@@ -3398,13 +3407,14 @@ endLoadingAnimation();
   }
   function closeScanningMode() {
     document.getElementById(`scanning-mode-popup`).classList.add(`hidden`);
-
+    closeModalDialog();
     scanningModeInputBox.removeEventListener("keypress", processScanningModeKeyUp);
 
     refresh()
   }
   function closeReportsView() {
     document.getElementById(`reports-view-popup`).classList.add(`hidden`);
+    closeModalDialog();
     restorePageScroll();
   }
 
@@ -3568,6 +3578,7 @@ endLoadingAnimation();
     document.getElementById("loading").style.visibility = "hidden";
     restorePageScroll();
   }
+  console.log("finished executing main JS");
   </script>
   <!-- End of js to remove and insert at runtime-->
 

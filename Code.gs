@@ -87,14 +87,57 @@ function getSetupPage() {
 //this function takes a file name and library name
 //reads the file (after prepending "3rd_party_library_"), splits it to find only the code for "libraryName" and returns it as text
 function include3rdPartyLibrary(fileName) {
+
+  //this is the alternative option that seems to work for reading the contents of the libraries then getting it as a string without unwanted sanitizing steps corrupting the libraries
+  let libraryContentAsHTMLTemplate = HtmlService.createTemplateFromFile('3rd_party_library_' + fileName);
+  let libraryContentAsString = libraryContentAsHTMLTemplate.getRawContent();
   
-  let libraryContentAsHTMLObject = HtmlService.createHtmlOutputFromFile('3rd_party_library_' + fileName)
+  if (libraryContentAsString.includes("<style>")) {
+    //this is a library containing CSS
+    //just return it directly
+    return libraryContentAsString;
+  }
+  else if (libraryContentAsString.includes("<script>")) {
+    //this is a library containing JS
+    let wrapperScript = `
+    <script>
+      console.log("Started executing ${fileName}");
+      (function (){
+        
+        let decoder = new TextDecoder();
+        let libraryContent = decoder.decode(Uint8Array.fromBase64("${Utilities.base64Encode(libraryContentAsString, Utilities.Charset.UTF_8)}"));  //encode to base64 to pass to client to avoid Google Apps Script santizing scripts that assign strings with "https://somewebsite.exampledomain" to variables (previously some scripts with URLS in them were having everything on a line after https:// truncated (including code after the string with the URL was done))). Then decode on the client. See encoding documentation on https://developers.google.com/apps-script/reference/utilities/utilities
+
+        libraryContent = \`
+        console.log("Started executing ${fileName} inner");
+        \` + libraryContent.slice(8, libraryContent.length-9) + 'console.log("Finished executing ${fileName} inner");' 
+
+
+        let libraryParentElement = document.createElement("script");
+        
+
+        libraryParentElement.innerHTML = libraryContent; //insert the library content directly into the libraryParentElement script tag. It should then be parsed by the browser and run
+
+        document.currentScript.parentNode.appendChild(libraryParentElement);
+
+        })();
+      console.log("Finished executing ${fileName}");
+    </script>
+    `
+    // Logger.log("\n'n");
+    // Logger.log(wrapperScript.slice(0,1000));
+    // Logger.log("-----------");
+    // Logger.log(wrapperScript.slice(wrapperScript.length-1000));
+    // Logger.log("\n\n");
+    return wrapperScript
+  }
+  else {
+    //something else
+    return libraryContentAsString;
+  }
   
-  return libraryContentAsHTMLObject.getContent(); //returns the HTML content as a string instead of an Object
 
 }
 function doGet(e) {
-
 
   if (e.pathInfo == null || e.pathInfo == "" || e.pathInfo == "/index" || e.pathInfo == "/index.html") {
 
@@ -107,7 +150,8 @@ function doGet(e) {
     }
     else {
       let htmlResponse =  HtmlService.createTemplateFromFile('index').evaluate()
-      
+
+
       htmlResponse.setTitle("Equipment Checkout System");
 
 
