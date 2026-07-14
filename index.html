@@ -2440,6 +2440,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function closeModalDialog() {
 
+
     document.getElementById("deleteButton").style.display="block"; //unhide the delete button (since opening some windows hides it)
 
     let popupModal = document.getElementById("popup-modal");
@@ -2451,7 +2452,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("popup-add-items-content").classList.add("hidden");
     document.getElementById("popup-add-students-content").classList.add("hidden");
     document.getElementById("popup-rental-details-content").classList.add("hidden");
-    document.getElementById("popup-scanning-mode").classList.add("hidden");
+    document.getElementById("scanning-mode-popup").classList.add("hidden");
     document.getElementById("reports-view-popup").classList.add("hidden");
 
     popupModal.getElementsByTagName("div")[0].scrollIntoView();
