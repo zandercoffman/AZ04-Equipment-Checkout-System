@@ -673,9 +673,7 @@ function buildRentalReceiptHTML({ studentID, itemName, assetTag, rentalID, dateO
 
     </p>
 
-    <p style="text-align: center; font-size: 12px; color: #999; margin-top: 20px;">
-      © ${new Date().getFullYear()} Tempe Union High School District
-    </p>
+    
   </div>
   `;
 }
