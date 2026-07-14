@@ -862,17 +862,17 @@ This provides details like student names, usernames, and possibly guardian permi
     <nav class="flex justify-between gap-10">
       <div class="flex flex-col md:flex-row gap-2 ">
         <button class="inline-flex shadow-md flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-        onclick="showSection('items', event)">
+        onclick="showSection('items-tab', event)">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-collapse"><path d="m3 10 2.5-2.5L3 5"/><path d="m3 19 2.5-2.5L3 14"/><path d="M10 6h11"/><path d="M10 12h11"/><path d="M10 18h11"/></svg>
           <span>Items</span>
       </button>
         <button class="inline-flex shadow-md flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-      onclick="showSection('rentals', event)">
+      onclick="showSection('rentals-tab', event)">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-align-start-vertical"><rect width="9" height="6" x="6" y="14" rx="2"/><rect width="16" height="6" x="6" y="4" rx="2"/><path d="M2 2v20"/></svg>
           <span>Rentals</span>
       </button>
         <button class="inline-flex shadow-md flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-      onclick="showSection('people', event)">
+      onclick="showSection('people-tab', event)">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-user"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg>
           <span>Students</span>
       </button>
@@ -951,7 +951,7 @@ This provides details like student names, usernames, and possibly guardian permi
        - Edit and "More" buttons
        - Action buttons (Add, Generate Barcodes, Delete)
 ============================================== -->
-    <section class="items mt-4" id="items">
+    <section class="items mt-4" id="items-tab">
       <div class="w-full bg-white rounded-xl px-7 py-8 shadow-md" style="min-width: fit-content;">
         <table id="item-table" border="1" class="w-full table-style">
           <div class="flex flex-col md:flex-row gap-2 justify-between items-center">
@@ -1074,7 +1074,7 @@ This provides details like student names, usernames, and possibly guardian permi
        - "More" details button
        - Create Rental button
 =============================================== -->
-    <section class="people flex flex-col gap-2" id="rentals">
+    <section class="people flex flex-col gap-2" id="rentals-tab">
 
       <div class="taModeBool hidden w-full bg-white rounded-xl px-7 py-8 mb-2 shadow-md flex flex-row justify-between"
         style="min-width: fit-content;">
@@ -1245,7 +1245,7 @@ This provides details like student names, usernames, and possibly guardian permi
        - Edit and "More" buttons
        - Action buttons (Add, Generate Barcodes, Delete)
 ================================================= -->
-    <section class="people flex flex-col gap-10" id="people">
+    <section class="people flex flex-col gap-10" id="people-tab">
       <div class="edit-button w-full bg-white rounded-xl px-7 py-8 mb-2 shadow-md flex flex-row justify-between "
         style="min-width: fit-content;">
         <div class="flex flex-col gap-2 w-full md:w-2/3">
@@ -1417,7 +1417,7 @@ This provides details like student names, usernames, and possibly guardian permi
   <script>
     function showSection(id, evt) {
   // Hide all sections
-  document.querySelectorAll('#items, #rentals, #people').forEach(sec => {
+  document.querySelectorAll('#items-tab, #rentals-tab, #people-tab').forEach(sec => {
     sec.style.display = 'none';
   });
   // Show selected section
@@ -1429,7 +1429,7 @@ This provides details like student names, usernames, and possibly guardian permi
 
 // On page load, show Items tab
 document.addEventListener('DOMContentLoaded', () => {
-  showSection('items', {target: document.querySelector('.tab-btn')});
+  showSection('items-tab', {target: document.querySelector('.tab-btn')});
 });
   </script>
 
