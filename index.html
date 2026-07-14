@@ -1841,6 +1841,13 @@ document.addEventListener('DOMContentLoaded', () => {
     startLoadingAnimation();
 
     let selectedStudents = getSelectedStudents();
+
+    if (selectedStudents.length == 0) {
+      alert("There are no selected students to delete.")
+      endLoadingAnimation();
+      return;
+    }
+
     let humanList = ""
 
     selectedStudents.forEach((student) => {
@@ -2171,7 +2178,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     //get and verify valid values
     addStudentsRowIDs.forEach((id) => {
-
       let studentIDValue = document.getElementById(`${id}-studentID-input`).value;
       let studentID = null;
 
@@ -2923,7 +2929,7 @@ endLoadingAnimation();
       let tbody = outputTable.querySelector("tbody");
       tbody.innerHTML = ``; 
 
-
+      
 
 
       for (const [id, student] of Object.entries(students)) {
@@ -2996,11 +3002,12 @@ endLoadingAnimation();
     }
 
     function renderRentals(students, rentals) {
+      
       const outputTable = document.getElementById("rental-table");
       let tbody = outputTable.querySelector("tbody");
       //tbody.innerHTML = ``; 
 
-
+      //alert(y); 1532
        google.script.run.withSuccessHandler((data) => {
         let items = JSON.parse(data)
 
