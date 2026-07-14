@@ -3620,7 +3620,7 @@ endLoadingAnimation();
     restorePageScroll();
   }
   function alertUserAboutServerError(error) {
-    Logger.error("Server threw an error: " + JSON.stringify(error));
+    console.error("Server threw an error: " + JSON.stringify(error));
     alert("The server encountered an error: '" + JSON.stringify(error) + "'");
   }
   console.log("finished executing main JS");
