@@ -87,14 +87,57 @@ function getSetupPage() {
 //this function takes a file name and library name
 //reads the file (after prepending "3rd_party_library_"), splits it to find only the code for "libraryName" and returns it as text
 function include3rdPartyLibrary(fileName) {
+
+  //this is the alternative option that seems to work for reading the contents of the libraries then getting it as a string without unwanted sanitizing steps corrupting the libraries
+  let libraryContentAsHTMLTemplate = HtmlService.createTemplateFromFile('3rd_party_library_' + fileName);
+  let libraryContentAsString = libraryContentAsHTMLTemplate.getRawContent();
   
-  let libraryContentAsHTMLObject = HtmlService.createHtmlOutputFromFile('3rd_party_library_' + fileName)
+  if (libraryContentAsString.includes("<style>")) {
+    //this is a library containing CSS
+    //just return it directly
+    return libraryContentAsString;
+  }
+  else if (libraryContentAsString.includes("<script>")) {
+    //this is a library containing JS
+    let wrapperScript = `
+    <script>
+      console.log("Started executing ${fileName}");
+      (function (){
+        
+        let decoder = new TextDecoder();
+        let libraryContent = decoder.decode(Uint8Array.fromBase64("${Utilities.base64Encode(libraryContentAsString, Utilities.Charset.UTF_8)}"));  //encode to base64 to pass to client to avoid Google Apps Script santizing scripts that assign strings with "https://somewebsite.exampledomain" to variables (previously some scripts with URLS in them were having everything on a line after https:// truncated (including code after the string with the URL was done))). Then decode on the client. See encoding documentation on https://developers.google.com/apps-script/reference/utilities/utilities
+
+        libraryContent = \`
+        console.log("Started executing ${fileName} inner");
+        \` + libraryContent.slice(8, libraryContent.length-9) + 'console.log("Finished executing ${fileName} inner");' 
+
+
+        let libraryParentElement = document.createElement("script");
+        
+
+        libraryParentElement.innerHTML = libraryContent; //insert the library content directly into the libraryParentElement script tag. It should then be parsed by the browser and run
+
+        document.currentScript.parentNode.appendChild(libraryParentElement);
+
+        })();
+      console.log("Finished executing ${fileName}");
+    </script>
+    `
+    // Logger.log("\n'n");
+    // Logger.log(wrapperScript.slice(0,1000));
+    // Logger.log("-----------");
+    // Logger.log(wrapperScript.slice(wrapperScript.length-1000));
+    // Logger.log("\n\n");
+    return wrapperScript
+  }
+  else {
+    //something else
+    return libraryContentAsString;
+  }
   
-  return libraryContentAsHTMLObject.getContent(); //returns the HTML content as a string instead of an Object
 
 }
 function doGet(e) {
-
 
   if (e.pathInfo == null || e.pathInfo == "" || e.pathInfo == "/index" || e.pathInfo == "/index.html") {
 
@@ -107,7 +150,8 @@ function doGet(e) {
     }
     else {
       let htmlResponse =  HtmlService.createTemplateFromFile('index').evaluate()
-      
+
+
       htmlResponse.setTitle("Equipment Checkout System");
 
 
@@ -132,8 +176,6 @@ function getJSON(element) {
     case "Items":
       return JSON.stringify(getItems());
     case "Rentals":
-      Logger.log("Getting rental info")
-      Logger.log("Rental Info:" + JSON.stringify(getRentals()))
       return JSON.stringify(getRentals())
     default:
       return ""
@@ -154,7 +196,6 @@ function createRental(itemID, studentID) {
 // REMEMBER IT DOES NOT HAVE THE "S" in the name
 //take a paramater students as input (this should be of the structure [{"id": "ID1", "classYear": "CLASS_YEAR1", "period": "PERIOD1", "name": "NAME1"}, {"id": "ID2", "classYear": "CLASS_YEAR2", "period": "PERIOD2", "name": "NAME2"}])
 function addStudentsToDatabase(students) {
-  Logger.log("AHHHHH: " + JSON.stringify(students));
   let currentStudents = Object.keys(getStudents());
 
   //check that there are no errors before editing the database
@@ -300,9 +341,9 @@ function editItemsInDatabase(items) {
 
 //take a paramater students as input (this should be of the structure [{id: "ID", classYear: "CLASSYEAR", period: "PERIOD", name: "NAME"}])
 function editStudentsInDatabase(students) {
-  Logger.log(students)
+  // Logger.log(students)
   students = JSON.parse(students)
-  Logger.log(students)
+  // Logger.log(students)
 
   let currentStudents = Object.keys(getStudents());
 
@@ -387,7 +428,7 @@ function deleteItemFromInventory(assetTag) {
 
 
 function deleteStudentsFromDatabase(ids) {
-  Logger.log(ids)
+  // Logger.log(ids)
   const sheet = datasheet.getSheetByName("Students");
   var range = sheet.getDataRange();
   var values = range.getValues();
@@ -718,7 +759,7 @@ function createRental(studentID, assetTag, dateToReturn) {
       emailSent = false;
     }
 
-    return emailSent ? "success" : "success:email_failed";
+    return emailSent ? "success" : "succeeded in creating rental, however email send failed";
 
 
   }
@@ -745,8 +786,8 @@ function getRentals() {
 
   //for each rental in the table convert the data into an easier to use format and append it to the rentals dictonary
   for (rental of dataToConvert) {
-    Logger.log("rentalInfo: ")
-    Logger.log(rental[3])
+    // Logger.log("rentalInfo: ")
+    // Logger.log(rental[3])
     rentals[rental[0]] =
     {
       rentalID: Number.parseInt(rental[0]),
@@ -1021,8 +1062,8 @@ function generateReport(reportType, timespanStart, timespanEnd) {
 
 
       Object.keys(itemStatistics).forEach((id) => {
-        Logger.log(id)
-        Logger.log(items)
+        // Logger.log(id)
+        // Logger.log(items)
         output["body"].push([items[id]["assetTagNumber"], items[id]["makeModel"], items[id]["itemDescription"], itemStatistics[id]]);
       })
     }
@@ -1035,11 +1076,11 @@ function generateReport(reportType, timespanStart, timespanEnd) {
       let itemStatistics = [];
       let error = "";
       Object.keys(items).forEach((key) => {
-        Logger.log(items[key]["status"])
+        // Logger.log(items[key]["status"])
         if (items[key]["status"] == "Lost") {
 
-          Logger.log(items[key]["rentalID"])
-          Logger.log(items[key])
+          // Logger.log(items[key]["rentalID"])
+          // Logger.log(items[key])
 
           try {
             itemStatistics.push([key, items[key]["makeModel"], items[key]["itemDescription"], rentals[items[key]["rentalID"]]["checkedOutTo"], rentals[items[key]["rentalID"]]["dateCheckedOut"], rentals[items[key]["rentalID"]]["dateExpectedToReturn"]]);
@@ -1098,7 +1139,7 @@ function doSomething() {
 
   //Logger.log(addStudentsToDatabase([{id: "55555", classYear: "5555", period: "5", name: "five"}, {id: "77777", classYear: "7777", period: "7", name: "seven"}]))
 
-  Logger.log(getPage('addStudents'));
+  // Logger.log(getPage('addStudents'));
 
   output = "I ran";
 
