@@ -1586,7 +1586,11 @@ document.addEventListener('DOMContentLoaded', () => {
           rentals = JSON.parse(data)
           renderRentals(students, rentals)
           fullyLoaded++
-        }).getJSON("Rentals");
+        }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).getJSON("Rentals");
+      }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
       }).getJSON("Student");
 
 
@@ -1599,11 +1603,15 @@ document.addEventListener('DOMContentLoaded', () => {
           
         };
         fullyLoaded++;
+      }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
       }).getJSON("Items");
 
       google.script.run.withSuccessHandler((data) => {
         document.getElementById("GoogleSheetsLink").href = data;
         document.getElementById("viewPastRentals").href = data;
+      }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
       }).getSpreadsheetURL();
       
       
@@ -1675,9 +1683,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         startLoadingAnimation();
-        google.script.run.withFailureHandler((err) => {
-          alert(`There was a problem in importing the students. Error: ${JSON.stringify(err)}`)
-        }).withSuccessHandler((data) => {
+        google.script.run.withFailureHandler((error) => {
+          alert("There was an error in importing the students");
+        alertUserAboutServerError(error);
+      }).withSuccessHandler((data) => {
           refresh();
         }).addStudentsToDatabase(students);
         // You can now pass `students` to whatever function processes them
@@ -1818,6 +1827,8 @@ document.addEventListener('DOMContentLoaded', () => {
       google.script.run.withSuccessHandler((result) => {
         toast(`${result}`)
         refresh()
+      }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
       }).deleteItemsFromInventory(selectedItems);
     }
     else {
@@ -1841,6 +1852,8 @@ document.addEventListener('DOMContentLoaded', () => {
       google.script.run.withSuccessHandler((result) => {
         toast(`${result}`)
         refresh()
+      }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
       }).deleteStudentsFromDatabase(selectedStudents);
     }
     else {
@@ -2136,7 +2149,9 @@ document.addEventListener('DOMContentLoaded', () => {
           //hide loader icon
           endLoadingAnimation();
         }
-    }).addItemsToDatabase(itemInfo);
+    }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).addItemsToDatabase(itemInfo);
     }
   }
 
@@ -2280,7 +2295,9 @@ document.addEventListener('DOMContentLoaded', () => {
           //hide loader icon
           endLoadingAnimation();
         }
-    }).addStudentsToDatabase(studentInfo);
+    }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).addStudentsToDatabase(studentInfo);
     }
   }
   let selectedModalStudentID = ''
@@ -2329,6 +2346,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         google.script.run.withSuccessHandler((data) => {
           refresh()
+        }).withFailureHandler((error) => {
+          alertUserAboutServerError(error);
         }).editItemsInDatabase(JSON.stringify([dataToWrite]));
 
         refresh();
@@ -2359,7 +2378,9 @@ document.addEventListener('DOMContentLoaded', () => {
         startLoadingAnimation()
         google.script.run.withSuccessHandler((data) => {
           refresh()
-        }).editStudentsInDatabase(JSON.stringify([dataToWrite]));
+        }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).editStudentsInDatabase(JSON.stringify([dataToWrite]));
         
 
 
@@ -2549,6 +2570,8 @@ endLoadingAnimation();
 
     document.getElementById("popup-modal").classList.remove("hidden");
     toast(JSON.stringify(fullRow));
+      }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
       }).findMakeModelBasedOnAssetTag(fullRow[3]);
 
     
@@ -2674,7 +2697,9 @@ endLoadingAnimation();
             toast(`${result}`)
             refresh()
             closeModalDialog();
-          }).deleteItemFromInventory([selectedModalItemID]);
+          }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).deleteItemFromInventory([selectedModalItemID]);
           }, 250)
           
         } else {
@@ -2693,7 +2718,9 @@ endLoadingAnimation();
             toast(`${result}`)
             refresh()
             closeModalDialog();
-          }).deleteStudentsFromDatabase([selectedModalStudentID]);
+          }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).deleteStudentsFromDatabase([selectedModalStudentID]);
           }, 250)
           
         } else {
@@ -3033,6 +3060,8 @@ endLoadingAnimation();
 
 
       }
+      }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
       }).getJSON("Items");
 
     
@@ -3296,7 +3325,9 @@ endLoadingAnimation();
               
             }
 
-          }).createRental(studentCode, itemCode, dateIntendedToRet);
+          }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).createRental(studentCode, itemCode, dateIntendedToRet);
 
         }
         //if the scanning mode is return then try to return the item
@@ -3316,7 +3347,9 @@ endLoadingAnimation();
                 scanningModeFlashAndReset("error", "Error returning rental: error message from server was '" + data2 + "'") //flash the screen red for a second to indicate failure then reset for more codes
                 return 9;
             }
-            }).returnRentals([itemCode], studentCode);
+            }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).returnRentals([itemCode], studentCode);
         }
       }
         
@@ -3522,7 +3555,9 @@ endLoadingAnimation();
       //remove the generating indicator
       document.getElementById(`indicator-${reportType}`).remove();
      
-    }).generateReport(reportType, timespanStart, timespanEnd);
+    }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).generateReport(reportType, timespanStart, timespanEnd);
     }
     
   }
@@ -3531,7 +3566,9 @@ endLoadingAnimation();
   function viewPastRentals() {
     google.script.run.withSuccessHandler((data) => {
       alert(data);
-    }).getSpreadsheetURL();
+    }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).getSpreadsheetURL();
 
   }
 
@@ -3574,6 +3611,10 @@ endLoadingAnimation();
   function endLoadingAnimation() {
     document.getElementById("loading").style.visibility = "hidden";
     restorePageScroll();
+  }
+  function alertUserAboutServerError(error) {
+    Logger.error("Server threw an error: " + JSON.stringify(error));
+    alert("The server encountered an error: '" + JSON.stringify(error) + "'");
   }
   console.log("finished executing main JS");
   </script>
