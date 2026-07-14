@@ -3250,8 +3250,23 @@ endLoadingAnimation();
         
         //if the scanning mode is create, try to create a rental
         if (scanningMode == "create") {
-           let dateIntendedToRet = prompt("What date would you like this rental to be returned? Use XX/XX/XXXX (eg. 06/12/2025)")
+           let dateIntendedToRet = prompt("What date would you like this rental to be returned? Please use MM/DD/YYYY or MM-DD-YYYY (eg. 06/12/2025)")
 
+          //do some checks on the date input before sending to the backend (the data should be checked by the backend but for these cases the data is already known to be invalid so no use wasting time sending it to the backend (and the check == null handles the prompt cancel button being pressed which was previously being assumed to be the UNIX epoch intead of an invalid date))
+          
+          //check whether the user didn't enter a string into the date prompt
+          if (dateIntendedToRet == "") {
+            scanningModeFlashAndReset("error", "Please enter a return date by typing a date in MM/DD/YYYY or MM-DD-YYYY format") //flash the screen red for a second to indicate failure then reset for more codes
+                return 11;
+          }
+
+          //check whether the user pressed cancel on the prompt for a date
+          else if (dateIntendedToRet == null) {
+            scanningModeFlashAndReset("error", "Aborted") //flash the screen red for a second to indicate failure then reset for more codes
+                return 12;
+          }
+
+          //send the data to the backend
             google.script.run.withSuccessHandler((data) => {
 
             //handle different possible responses
@@ -3259,18 +3274,25 @@ endLoadingAnimation();
               case "Can't create new rental, the student ID specified is not in the database":
                 scanningModeFlashAndReset("error", "Can't create new rental, the student ID '" + studentCode + "' is not in the database") //flash the screen red for a second to indicate failure then reset for more codes
                 return 6;
-                break;
               case "Can't create new rental, the item has a status of 'Out'":
                 scanningModeFlashAndReset("error", "Can't create new rental, the item already has a status of '" + items[itemCode]["status"] + "'") //flash the screen red for a second to indicate failure then reset for more codes
-                break;
-                return 7
+                return 7;
               case "Can't create new rental, the item has a status of 'Repair'":
                 scanningModeFlashAndReset("error", "Can't create new rental, the item has a status of 'repair'") //flash the screen red for a second to indicate failure then reset for more codes
-                break;
-                return 7
+                return 8;
+              case "Invalid return date provided.":
+                scanningModeFlashAndReset("error", "Invalid return date provided. Please try again and provide a date in MM/DD/YYYY or MM-DD-YYYY format") //flash the screen red for a second to indicate failure then reset for more codes
+                return 9;
               case "success":
-                console.log("succeded in creating new rental for student '" + studentCode + "' and item '" + itemCode + "'")
+                console.log("Succeded in creating new rental for student '" + studentCode + "' and item '" + itemCode + "'")
                 scanningModeFlashAndReset("success") //flash the screen green for a second to indicate sucess then reset for more codes
+                return 0;
+              case "succeeded in creating rental, however email send failed":
+                scanningModeFlashAndReset("partial_success", "Succeded in creating new rental for student '" + studentCode + "' and item '" + itemCode + "', however. Sending an email reciept to the student failed.") //flash the screen green for a second to indicate sucess then reset for more codes
+                return 13;
+              default:
+                scanningModeFlashAndReset("error", "Unknown message returned from server. Here is the message: '" + data + "'"); //flash the screen red for a second to indicate failure then reset for more codes
+                return 10;
               
             }
 
@@ -3311,10 +3333,13 @@ endLoadingAnimation();
   function scanningModeFlashAndReset(type, errorMessage=null) {
     let color = "#FFFFFF"
     if (type == "error") {
-      color = "#fb3e33"
+      color = "#fb3e33";
+    }
+    else if (type == "partial_success") {
+      color = "#ebff14";
     }
     else if (type == "success") {
-      color = "#5dfb91"
+      color = "#5dfb91";
     }
     //make the loading icon hidden again
     endLoadingAnimation();

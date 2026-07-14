@@ -759,7 +759,7 @@ function createRental(studentID, assetTag, dateToReturn) {
       emailSent = false;
     }
 
-    return emailSent ? "success" : "success:email_failed";
+    return emailSent ? "success" : "succeeded in creating rental, however email send failed";
 
 
   }
