@@ -1649,13 +1649,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const reader = new FileReader();
 
     reader.onload = function (e) {
+        
         const contents = e.target.result;
         const lines = contents.split(/\r?\n/).filter(line => line.trim() !== "");
         var students = [];
 
         let doesHaveHeader = false;
+        let linesWithPartialData = 0;
+        let linesWithInvalidIDs = 0;
+        let linesWithExistingStudentIDs = [];
 
-        for (const line of lines) {
+        startLoadingAnimation();
+        google.script.run.withSuccessHandler((data) => {
+          existingStudentIDs = new Set(Object.keys(JSON.parse(data)));
+
+          for (const line of lines) {
             let lineSplit = line.split(',');
 
             let [id, name, period, extra] = line.split(',').map(cell => cell.trim());
@@ -1671,26 +1679,76 @@ document.addEventListener('DOMContentLoaded', () => {
             if (id.toLowerCase().includes("s")) { // for instance, s26600042
               id = id.substring(1)
             }
-            const classYear = "20" + id.substring(0, 2); //s26600042 -> 26
-
-            if (id && name && period) {
-                students.push({ id, classYear, period, name });
+            let classYear = "";
+            if (id.length >= 2) { //only extract the class year from the ID if the ID is long enough
+              classYear = "20" + id.substring(0, 2); //s26600042 -> 26
             }
-        }
 
-        if (doesHaveHeader) {
-          students = students.filter((val, index) => index !== 0)
-        }
+            if (name && period) {
+                //do nothing
+            }
+            else {
+              linesWithPartialData++;
+            }
+            if (id) {
+              if (existingStudentIDs.has(id)) {
+                linesWithExistingStudentIDs.push(id);
+              }
+              else {
+                students.push({ id, classYear, period, name });
+              }
+              
+            }
+            else {
+              linesWithInvalidIDs++;
+            }
 
-        startLoadingAnimation();
-        google.script.run.withFailureHandler((error) => {
-          alert("There was an error in importing the students");
-        alertUserAboutServerError(error);
-      }).withSuccessHandler((data) => {
-          refresh();
-        }).addStudentsToDatabase(students);
-        // You can now pass `students` to whatever function processes them
-        // e.g., addStudentsToSystem(students);
+            
+          }
+
+          if (doesHaveHeader) {
+            students = students.filter((val, index) => index !== 0)
+          }
+
+          if (linesWithInvalidIDs > 0) {
+            alert(linesWithInvalidIDs + " lines of data in this CSV file are missing student IDs, they will be omitted from the import. Please check the list of imported students once the import is finished and manually add the missing students.")
+          }
+          if (linesWithPartialData>0) {
+            alert(linesWithPartialData + " lines of data in this file are missing Names and/or Periods. These students will still be added as long as they are not also missing their student IDs.")
+          }
+          if (linesWithExistingStudentIDs.length > 0) {
+            let output = "The following students from the file (listed by Student ID) are already contained within the database and will be skipped during import: \n" ;
+            linesWithExistingStudentIDs.forEach((studentID) => {
+              output += studentID + " ";
+            })
+            alert(output);
+          }
+          
+          
+          google.script.run.withFailureHandler((error) => {
+            alert("There was an error in importing the students");
+            alertUserAboutServerError(error);
+            endLoadingAnimation();
+          }).withSuccessHandler((data) => {
+
+            //this checks whether the server says that some students are already in the database
+            //however, this should be obsolete, since a check above should ensure that duplicate students should not be sent to the server and instead the user will be alerted
+            if (data.includes("already exists in the database")) {
+              alert("The server responded that some students were already in the database. The import was aborted. Here is the full message:\n\n" + data);
+            }
+            refresh();
+            endLoadingAnimation();
+          }).addStudentsToDatabase(students);
+          // You can now pass `students` to whatever function processes them
+          // e.g., addStudentsToSystem(students);
+          
+        }).withFailureHandler((error) => {
+          alert("Failed to fetch existing student IDs from server to check for duplicates during import")
+          alertUserAboutServerError(error);
+          endLoadingAnimation();
+        }).getJSON("Student");
+
+        
     };
 
     reader.onerror = function () {
@@ -2669,7 +2727,7 @@ endLoadingAnimation();
 
     //add one row to the add students view
     updateAddStudentsPopupRows(1);
-    
+
     document.getElementById("popup-modal-title").innerHTML = "Add Students View";
     
     document.getElementById("popup-add-students-content").classList.remove("hidden")

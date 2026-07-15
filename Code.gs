@@ -204,8 +204,11 @@ function addStudentsToDatabase(students) {
   students.forEach((student) => {
 
     if (currentStudents.includes(student.id)) {
-      error = "Error: Student ID '" + student.id + "' already exists in the database";
+      error += "Error: Student ID '" + student.id + "' already exists in the database\n";
 
+    }
+    else if (student.id == "" || student.id == null) {
+      throw new Error("The following student information is invalid since it is missing a student ID: " + JSON.stringify(student));
     }
     student.name = student.name.replaceAll("\"", "");
     student.id = student.id.replace(/\D/g, "");
