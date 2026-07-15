@@ -3,7 +3,7 @@
 
 <!-- ========================================
      Equipment Checkout System – Main HTML
-     Author: Zander Coffman
+     Author: Zander Coffman, Daniel Briggs
      Purpose: Web interface for managing 
               items, students, and rentals 
               in an equipment checkout workflow.
@@ -24,26 +24,27 @@
 ==================================== -->
 
 <head>
-  <base target="_top">
+  <base target=" _top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Equipment Checkout System</title>
 
   <!-- ========== SCRIPT IMPORTS ==========
-     - canvg: Converts SVG to Canvas for PDF use
      - React & ReactDOM: (Possible future UI use)
      - Tailwind config customization
      - jsPDF & autotable for PDF generation
 ======================================= -->
 
+  
   <!--Download Tailwind CSS (CSS Framework)-->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <?!= include3rdPartyLibrary('tailwind-css'); ?> <!--JS script-->
 
   <!--Custom Component Library for CSS Tailwind-->
-  <link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" />
+  <?!= include3rdPartyLibrary('flowbite_css'); ?> <!--CSS file-->
+
 
   <!--JS Barcode library for generating pdfs with barcodes represeting items or students-->
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+  <?!= include3rdPartyLibrary('jsbarcode'); ?> <!--JS script-->
 
   <!--Download google fonts-->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,14 +53,15 @@
     rel="stylesheet">
 
   <!--Download JQuery-->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <?!= include3rdPartyLibrary('jquery'); ?> <!--JS script-->
+  
 
   <!--Download Boostrap-->
-  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <?!= include3rdPartyLibrary('bootstrap-css'); ?> <!--CSS-->
+  <?!= include3rdPartyLibrary('bootstrap-js'); ?> <!--JS-->
 
   <!-- Importing a .xls to .json converter-->
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <?!= include3rdPartyLibrary('sheetjs'); ?> <!--JS script-->
   <!-- ChatGPT said: 
   
   Available Function: Class List via Admin Reports (XLS)
@@ -79,10 +81,6 @@ This provides details like student names, usernames, and possibly guardian permi
 
 
 
-  <!--
-  Old libraries
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3.1.0/dist/notyf.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/notyf@3.1.0/dist/notyf.min.js"></script>-->
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
@@ -308,7 +306,119 @@ This provides details like student names, usernames, and possibly guardian permi
 ============================================== -->
   <canvas width="1000px" height="1000px" id="barcodeCanvas" style="display: none"></canvas>
 
-  <!-- ========== POPUP: SCANNING MODE ==========
+  
+
+  
+
+
+
+  <!-- ========== POPUP: LOADING INDICATOR ==========
+     Small floating panel showing currently generating reports
+============================================ -->
+  <div id="generatingReportsIndicator" style="visibility: hidden;">
+    <!--HTML representing each report is added here using JS-->
+  </div>
+
+
+  <!-- ========== POPUP: ENTITY DETAILS ==========
+     Shared modal for viewing/editing:
+       - Item details
+       - Rental details
+       - Student details
+       - Add new items/students
+     Note: Only one section is visible at a time.
+============================================ -->
+
+
+  <div id="popup-modal"
+    class="hidden fixed top-0 left-0 z-50 w-full h-full flex items-center justify-center bg-black bg-opacity-50 overflow-y-scroll">
+    <div class="bg-white rounded-xl shadow-lg p-6 h-fit"
+      style="width: 95vw; min-height: 95vh; position: absolute; left: 0vw; top: 0vw; margin-left: 2.5vw; margin-right: 2.5vw; margin-top: 2.5vh; margin-bottom: 2.5vh;">
+
+
+      <!--Title shown in the popup, depending on which section is visible this title is updating using JS-->
+      <h3 class="text-2xl font-semibold mb-4" id="popup-modal-title">CATAGORY Details</h3>
+
+
+
+
+
+
+      <!-- ========== POPUP: REPORTS VIEW ==========
+      UI for generating PDF reports:
+        - Item popularity
+        - Lost item report
+        - Timespan selection
+        ============================================ -->
+  <div id="reports-view-popup" class="hidden fixed top-0 left-0 z-50 w-full h-full flex justify-center bg-black overflow-y-scroll bg-opacity-50">
+    <div class="bg-white rounded-xl shadow-lg p-6 w-full flex flex-column justify-between items-center"
+      style="width: 95vw; min-height: 95vh; height: fit-content; text-align: center; margin-top: 20px; margin-bottom: 20px;">
+      <h3 class="text-2xl font-semibold mb-4" id="reports-view-popup-title" style="font-size: 2em;">Reports View</h3>
+
+
+      <!--Section for chosing what data to include in reports-->
+      <div class="report-view-row items-center flex flex-column">
+        <div class="report-view-row-header items-center flex flex-column">
+          <h3 style="font-size: 2em; margin: 20px;">Timespan</h3>
+          <p style="max-width: 30%; text-align: center;">Select the start and end dates the report should be based on.
+            Click a calender icon to select a date, or click on mm/dd/yyyy to type a date.</p>
+        </div>
+        <div class="report-view-button-div">
+          <p style="font-size: 1.5em;">Start</p>
+          <input id="report-view-timespanStart-input" type="date">
+
+          <p style="font-size: 1.5em;">End</p>
+          <input id="report-view-timespanEnd-input" type="date">
+        </div>
+      </div>
+
+      <!--Section for chosing which report types to download-->
+      <div id="report-download-buttons" class="flex flex-column justify-between; items-center;" style="gap: 10px;">
+        <h3 style="font-size: 2em; margin: 20px;">Select Report Type</h3>
+        <div class="report-view-row">
+          <div class="report-view-row-header">
+            <h3>Item Popularity/Usage Report</h3>
+          </div>
+          <div class="report-view-button-div">
+            <button onclick="generateAndDownloadReport('itemPopularityUsageReport', document.getElementById('report-view-timespanStart-input').value, document.getElementById('report-view-timespanEnd-input').value)" class="report-view-button inline-flex flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+              <span>Generate and Download</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="report-view-row">
+          <div class="report-view-row-header">
+            <h3>Lost Item Report</h3>
+          </div>
+          <div class="report-view-button-div">
+            <button onclick="generateAndDownloadReport('lostItemReport', document.getElementById('report-view-timespanStart-input').value, document.getElementById('report-view-timespanEnd-input').value)" class="report-view-button inline-flex flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+              <span>Generate and Download</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+
+      <!--Close Reports View popup button-->
+      <div class="w-full flex flex-row justify-between items-center">
+        <div class="flex flex-row gap-4 items-center" style="width: 100%;">
+          <div class="flex flex-row gap-2 items-center" style="width: 100%;">
+            <button id="close-report-view-popup" onclick="closeReportsView()" style="margin-left: auto; margin-right: auto;" class="mt-4 flex flex-row gap-1 bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600 items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                <span>Close</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  
+      <!-- ========== POPUP: SCANNING MODE ==========
      UI for scanning or typing IDs to create/return rentals.
      Features:
        - Mode selection (Create Rentals / Return Rentals)
@@ -350,7 +460,7 @@ This provides details like student names, usernames, and possibly guardian permi
           </div>
 
 
-          <!--Close button-->
+          <!--Close Scanning Mode button-->
           <div class="flex flex-row gap-4">
             <div class="flex flex-row gap-2">
               <button id="close-scanning-mode-popup" onclick="closeScanningMode()" class="mt-4 flex flex-row gap-1 bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600">
@@ -403,108 +513,6 @@ This provides details like student names, usernames, and possibly guardian permi
       </div>
     </div>
   </div>
-
-  <!-- ========== POPUP: REPORTS VIEW ==========
-     UI for generating PDF reports:
-       - Item popularity
-       - Lost item report
-       - Timespan selection
-============================================ -->
-  <div id="reports-view-popup"
-    class="hidden fixed top-0 left-0 z-50 w-full h-full flex justify-center bg-black overflow-y-scroll bg-opacity-50">
-    <div class="bg-white rounded-xl shadow-lg p-6 w-full flex flex-column justify-between items-center"
-      style="width: 95vw; min-height: 95vh; height: fit-content; text-align: center; margin-top: 20px; margin-bottom: 20px;">
-      <h3 class="text-2xl font-semibold mb-4" id="scanning-mode-popup-title" style="font-size: 2em;">Reports View</h3>
-
-
-      <!--Section for chosing what data to include in reports-->
-      <div class="report-view-row items-center flex flex-column">
-        <div class="report-view-row-header items-center flex flex-column">
-          <h3 style="font-size: 2em; margin: 20px;">Timespan</h3>
-          <p style="max-width: 30%; text-align: center;">Select the start and end dates the report should be based on.
-            Click a calender icon to select a date, or click on mm/dd/yyyy to type a date.</p>
-        </div>
-        <div class="report-view-button-div">
-          <p style="font-size: 1.5em;">Start</p>
-          <input id="report-view-timespanStart-input" type="date">
-
-          <p style="font-size: 1.5em;">End</p>
-          <input id="report-view-timespanEnd-input" type="date">
-        </div>
-      </div>
-
-      <!--Section for chosing which report types to download-->
-      <div id="report-download-buttons" class="flex flex-column justify-between; items-center;" style="gap: 10px;">
-        <h3 style="font-size: 2em; margin: 20px;">Select Report Type</h3>
-        <div class="report-view-row">
-          <div class="report-view-row-header">
-            <h3>Item Popularity/Usage Report</h3>
-          </div>
-          <div class="report-view-button-div">
-            <button onclick="generateAndDownloadReport('itemPopularityUsageReport', document.getElementById('report-view-timespanStart-input').value, document.getElementById('report-view-timespanEnd-input').value)" class="report-view-button inline-flex flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
-              <span>Generate and Download</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="report-view-row">
-          <div class="report-view-row-header">
-            <h3>Lost Item Report</h3>
-          </div>
-          <div class="report-view-button-div">
-            <button onclick="generateAndDownloadReport('lostItemReport', document.getElementById('report-view-timespanStart-input').value, document.getElementById('report-view-timespanEnd-input').value)" class="report-view-button inline-flex flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
-              <span>Generate and Download</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-
-      <!--Close popup button-->
-      <div class="w-full flex flex-row justify-between items-center">
-        <div class="flex flex-row gap-4 items-center" style="width: 100%;">
-          <div class="flex flex-row gap-2 items-center" style="width: 100%;">
-            <button id="close-report-view-popup" onclick="closeReportsView()" style="margin-left: auto; margin-right: auto;" class="mt-4 flex flex-row gap-1 bg-red-500 text-white px-3 py-2 rounded-md hover:bg-red-600 items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                <span>Close</span>
-              </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  </div>
-
-
-
-  <!-- ========== POPUP: LOADING INDICATOR ==========
-     Small floating panel showing currently generating reports
-============================================ -->
-  <div id="generatingReportsIndicator" style="visibility: hidden;">
-    <!--HTML representing each report is added here using JS-->
-  </div>
-
-
-  <!-- ========== POPUP: ENTITY DETAILS ==========
-     Shared modal for viewing/editing:
-       - Item details
-       - Rental details
-       - Student details
-       - Add new items/students
-     Note: Only one section is visible at a time.
-============================================ -->
-  <div id="popup-modal"
-    class="hidden fixed top-0 left-0 z-50 w-full h-full flex items-center justify-center bg-black bg-opacity-50 overflow-y-scroll">
-    <div class="bg-white rounded-xl shadow-lg p-6 h-fit"
-      style="width: 95vw; min-height: 95vh; position: absolute; left: 0vw; top: 0vw; margin-left: 2.5vw; margin-right: 2.5vw; margin-top: 2.5vh; margin-bottom: 2.5vh;">
-
-
-      <!--Title shown in the popup, depending on which section is visible this title is updating using JS-->
-      <h3 class="text-2xl font-semibold mb-4" id="popup-modal-title">CATAGORY Details</h3>
-
-
 
       <!-- Item details section here -->
 
@@ -854,17 +862,17 @@ This provides details like student names, usernames, and possibly guardian permi
     <nav class="flex justify-between gap-10">
       <div class="flex flex-col md:flex-row gap-2 ">
         <button class="inline-flex shadow-md flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-        onclick="showSection('items', event)">
+        onclick="showSection('items-tab', event)">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-collapse"><path d="m3 10 2.5-2.5L3 5"/><path d="m3 19 2.5-2.5L3 14"/><path d="M10 6h11"/><path d="M10 12h11"/><path d="M10 18h11"/></svg>
           <span>Items</span>
       </button>
         <button class="inline-flex shadow-md flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-      onclick="showSection('rentals', event)">
+      onclick="showSection('rentals-tab', event)">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-align-start-vertical"><rect width="9" height="6" x="6" y="14" rx="2"/><rect width="16" height="6" x="6" y="4" rx="2"/><path d="M2 2v20"/></svg>
           <span>Rentals</span>
       </button>
         <button class="inline-flex shadow-md flex flex-row gap-2 text-white items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-      onclick="showSection('people', event)">
+      onclick="showSection('people-tab', event)">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-user"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg>
           <span>Students</span>
       </button>
@@ -938,12 +946,12 @@ This provides details like student names, usernames, and possibly guardian permi
 
     <!-- ========== MAIN CONTENT: ITEM LIST ==========
      Displays all items in a table:
-       - Basic info (location, name, model, status)
+       - Basic info (school, name, model, status)
        - Selection checkboxes
        - Edit and "More" buttons
        - Action buttons (Add, Generate Barcodes, Delete)
 ============================================== -->
-    <section class="items mt-4" id="items">
+    <section class="items mt-4" id="items-tab">
       <div class="w-full bg-white rounded-xl px-7 py-8 shadow-md" style="min-width: fit-content;">
         <table id="item-table" border="1" class="w-full table-style">
           <div class="flex flex-col md:flex-row gap-2 justify-between items-center">
@@ -1023,7 +1031,7 @@ This provides details like student names, usernames, and possibly guardian permi
               <th
                 class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
                 id="items-header-model">
-                Location
+                School
               </th>
               <th
                 class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
@@ -1066,7 +1074,7 @@ This provides details like student names, usernames, and possibly guardian permi
        - "More" details button
        - Create Rental button
 =============================================== -->
-    <section class="people flex flex-col gap-2" id="rentals">
+    <section class="people flex flex-col gap-2" id="rentals-tab">
 
       <div class="taModeBool hidden w-full bg-white rounded-xl px-7 py-8 mb-2 shadow-md flex flex-row justify-between"
         style="min-width: fit-content;">
@@ -1182,7 +1190,7 @@ This provides details like student names, usernames, and possibly guardian permi
               </th>
               <th
                 class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0">
-                Location
+                School
               </th>
               <th
                 class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0">
@@ -1237,7 +1245,7 @@ This provides details like student names, usernames, and possibly guardian permi
        - Edit and "More" buttons
        - Action buttons (Add, Generate Barcodes, Delete)
 ================================================= -->
-    <section class="people flex flex-col gap-10" id="people">
+    <section class="people flex flex-col gap-10" id="people-tab">
       <div class="edit-button w-full bg-white rounded-xl px-7 py-8 mb-2 shadow-md flex flex-row justify-between "
         style="min-width: fit-content;">
         <div class="flex flex-col gap-2 w-full md:w-2/3">
@@ -1369,22 +1377,17 @@ This provides details like student names, usernames, and possibly guardian permi
      async data loading from server.
 ========================================= -->
   <div id="loading">
-    <!-- Loader icon from https://github.com/n3r4zzurr0/svg-spinners (MIT License) -->
-    <img class="report-indicator-loader-icon" alt="loading icon" width="64px" height="64px" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48c3R5bGU+LnNwaW5uZXJfRHVwVXthbmltYXRpb246c3Bpbm5lcl9zTTNEIDEuMnMgaW5maW5pdGV9LnNwaW5uZXJfR1d0WnthbmltYXRpb24tZGVsYXk6LjFzfS5zcGlubmVyX2R3TjZ7YW5pbWF0aW9uLWRlbGF5Oi4yc30uc3Bpbm5lcl80NlFQe2FuaW1hdGlvbi1kZWxheTouM3N9LnNwaW5uZXJfUEQ4MnthbmltYXRpb24tZGVsYXk6LjRzfS5zcGlubmVyX2VVZ2h7YW5pbWF0aW9uLWRlbGF5Oi41c30uc3Bpbm5lcl9lVWFQe2FuaW1hdGlvbi1kZWxheTouNnN9LnNwaW5uZXJfajM4SHthbmltYXRpb24tZGVsYXk6LjdzfS5zcGlubmVyX3RWbVh7YW5pbWF0aW9uLWRlbGF5Oi44c30uc3Bpbm5lcl9EUWhYe2FuaW1hdGlvbi1kZWxheTouOXN9LnNwaW5uZXJfR0lMNHthbmltYXRpb24tZGVsYXk6MXN9LnNwaW5uZXJfbjBZYnthbmltYXRpb24tZGVsYXk6MS4xc31Aa2V5ZnJhbWVzIHNwaW5uZXJfc00zRHswJSw1MCV7YW5pbWF0aW9uLXRpbWluZy1mdW5jdGlvbjpjdWJpYy1iZXppZXIoMCwxLDAsMSk7cjowfTEwJXthbmltYXRpb24tdGltaW5nLWZ1bmN0aW9uOmN1YmljLWJlemllciguNTMsMCwuNjEsLjczKTtyOjJweH19PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzcGlubmVyX0R1cFUiIGN4PSIxMiIgY3k9IjMiIHI9IjAiLz48Y2lyY2xlIGNsYXNzPSJzcGlubmVyX0R1cFUgc3Bpbm5lcl9HV3RaIiBjeD0iMTYuNTAiIGN5PSI0LjIxIiByPSIwIi8+PGNpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfbjBZYiIgY3g9IjcuNTAiIGN5PSI0LjIxIiByPSIwIi8+PGNpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfZHdONiIgY3g9IjE5Ljc5IiBjeT0iNy41MCIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyX0dJTDQiIGN4PSI0LjIxIiBjeT0iNy41MCIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyXzQ2UVAiIGN4PSIyMS4wMCIgY3k9IjEyLjAwIiByPSIwIi8+PGNpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfRFFoWCIgY3g9IjMuMDAiIGN5PSIxMi4wMCIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyX1BEODIiIGN4PSIxOS43OSIgY3k9IjE2LjUwIiByPSIwIi8+PGNpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfdFZtWCIgY3g9IjQuMjEiIGN5PSIxNi41MCIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyX2VVZ2giIGN4PSIxNi41MCIgY3k9IjE5Ljc5IiByPSIwIi8+PGNpcmNsZSBjbGFzcz0ic3Bpbm5lcl9EdXBVIHNwaW5uZXJfajM4SCIgY3g9IjcuNTAiIGN5PSIxOS43OSIgcj0iMCIvPjxjaXJjbGUgY2xhc3M9InNwaW5uZXJfRHVwVSBzcGlubmVyX2VVYVAiIGN4PSIxMiIgY3k9IjIxIiByPSIwIi8+PC9zdmc+"></img>
+    <?!= include3rdPartyLibrary('svg-spinners'); ?> <!--HTML5 image tag-->
   </div>
 
-  <script type="module">
-    import { Canvg } from 'https://cdn.skypack.dev/canvg@4.0.2' //see https://canvg.js.org/examples/browser
-    window.canvg = Canvg;
-  </script>
 
   <script>
     function onSuccess(response) {
         alert(JSON.stringify(response));
       }
   </script>
-  <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+  <?!= include3rdPartyLibrary('react'); ?> <!--JS file-->
+  <?!= include3rdPartyLibrary('react-dom'); ?> <!--JS file-->
 
 
   <script>
@@ -1400,22 +1403,21 @@ This provides details like student names, usernames, and possibly guardian permi
   </script>
 
   <!-- ========== SCRIPT IMPORTS ==========
-     - canvg: Converts SVG to Canvas for PDF use
      - React & ReactDOM: (Possible future UI use)
      - Tailwind config customization
      - jsPDF & autotable for PDF generation
      - Flowbite, a tailwind component library
 ======================================= -->
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
+  <?!= include3rdPartyLibrary('jspdf'); ?> <!--JS file-->
+  <?!= include3rdPartyLibrary('jspdf-autotable'); ?> <!--JS file-->
+  <?!= include3rdPartyLibrary('flowbite_js'); ?> <!--JS file-->
 
   <!-- ======== ADDED: Script for switching tabs ======== -->
   <script>
     function showSection(id, evt) {
   // Hide all sections
-  document.querySelectorAll('#items, #rentals, #people').forEach(sec => {
+  document.querySelectorAll('#items-tab, #rentals-tab, #people-tab').forEach(sec => {
     sec.style.display = 'none';
   });
   // Show selected section
@@ -1427,7 +1429,7 @@ This provides details like student names, usernames, and possibly guardian permi
 
 // On page load, show Items tab
 document.addEventListener('DOMContentLoaded', () => {
-  showSection('items', {target: document.querySelector('.tab-btn')});
+  showSection('items-tab', {target: document.querySelector('.tab-btn')});
 });
   </script>
 
@@ -1450,6 +1452,7 @@ document.addEventListener('DOMContentLoaded', () => {
        - Uses google.script.run.getJSON(...) to fetch data from Google Apps Script backend
 ============================================= -->
   <script>
+    console.log("started executing main JS");
     //if the browser console says error at userAppCodePanel:LINE_NUMBER, to find the error take LINE_NUMBER and add the line number of this comment (around 584), this will get you to approximately the line of the error
   
   
@@ -1573,6 +1576,7 @@ document.addEventListener('DOMContentLoaded', () => {
       //render the students and items
 
       checkedStudents = {} //clear this list which gets populated by rendering students
+      
       google.script.run.withSuccessHandler((data) => {
         students = JSON.parse(data)
         renderStudents(students)
@@ -1582,7 +1586,11 @@ document.addEventListener('DOMContentLoaded', () => {
           rentals = JSON.parse(data)
           renderRentals(students, rentals)
           fullyLoaded++
-        }).getJSON("Rentals");
+        }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).getJSON("Rentals");
+      }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
       }).getJSON("Student");
 
 
@@ -1595,11 +1603,15 @@ document.addEventListener('DOMContentLoaded', () => {
           
         };
         fullyLoaded++;
+      }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
       }).getJSON("Items");
 
       google.script.run.withSuccessHandler((data) => {
         document.getElementById("GoogleSheetsLink").href = data;
         document.getElementById("viewPastRentals").href = data;
+      }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
       }).getSpreadsheetURL();
       
       
@@ -1670,11 +1682,11 @@ document.addEventListener('DOMContentLoaded', () => {
           students = students.filter((val, index) => index !== 0)
         }
 
-        console.log("Parsed students:", students);
         startLoadingAnimation();
-        google.script.run.withFailureHandler((err) => {
-          alert(`There was a problem in importing the students. Error: ${JSON.stringify(err)}`)
-        }).withSuccessHandler((data) => {
+        google.script.run.withFailureHandler((error) => {
+          alert("There was an error in importing the students");
+        alertUserAboutServerError(error);
+      }).withSuccessHandler((data) => {
           refresh();
         }).addStudentsToDatabase(students);
         // You can now pass `students` to whatever function processes them
@@ -1733,14 +1745,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (barcodeImage) {
       doc.addImage(
         barcodeImage,
-        "PNG",
-        barcodeX,
-        rowY,
+        "PNG", // Format
+        barcodeX, // X position in CM, aligned with what Mr. Manigold wants
+        rowY, // Y position in CM, aligned with the top of the row
         barcodeWidth,
         barcodeHeight,
-        undefined,
-        "FAST",
-        0
+        undefined, //alias
+        "FAST", //compression
+        0 //rotation
       );
     }
   }
@@ -1799,7 +1811,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let selectedItems = getSelectedItems();
     if (selectedItems.length == 0) {
-      alert("There is no selected items to delete.")
+      alert("There are no selected items to delete.")
       endLoadingAnimation();
       return;
     }
@@ -1807,8 +1819,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let humanList = ""
 
     selectedItems.forEach((item) => {
-      console.log(item)
-      console.log(humanList)
       humanList+= " " + String(item) + ","
     })
     humanList=humanList.slice(0,humanList.length-1) //remove the extra "," at the end of the list/string
@@ -1817,6 +1827,20 @@ document.addEventListener('DOMContentLoaded', () => {
       google.script.run.withSuccessHandler((result) => {
         toast(`${result}`)
         refresh()
+      }).withFailureHandler((error) => {
+        if (error["message"].length > 129) {
+          
+          if (error["message"].substring(0,128) == "Error: The following items have associated outstanding rentals that must be resolved before deleting the items from the database") {
+            alert(error["message"]);
+            endLoadingAnimation();
+          }
+          else {
+            alertUserAboutServerError(error);
+          }
+        }
+        else {
+        alertUserAboutServerError(error);
+        }
       }).deleteItemsFromInventory(selectedItems);
     }
     else {
@@ -1829,11 +1853,16 @@ document.addEventListener('DOMContentLoaded', () => {
     startLoadingAnimation();
 
     let selectedStudents = getSelectedStudents();
+
+    if (selectedStudents.length == 0) {
+      alert("There are no selected students to delete.")
+      endLoadingAnimation();
+      return;
+    }
+
     let humanList = ""
 
     selectedStudents.forEach((student) => {
-      console.log(student)
-      console.log(humanList)
       humanList+= " " + String(student) + ","
     })
     humanList=humanList.slice(0,humanList.length-1) //remove the extra "," at the end of the list/string
@@ -1842,6 +1871,20 @@ document.addEventListener('DOMContentLoaded', () => {
       google.script.run.withSuccessHandler((result) => {
         toast(`${result}`)
         refresh()
+      }).withFailureHandler((error) => {
+        if (error["message"].length > 134) {
+        
+          if (error["message"].substring(0,133) == "Error: The following students have rentals that are not returned that must be resolved before deleting the students from the database") {
+            alert(error["message"]);
+            endLoadingAnimation();
+          }
+          else {
+            alertUserAboutServerError(error);
+          }
+        }
+        else {
+        alertUserAboutServerError(error);
+        }
       }).deleteStudentsFromDatabase(selectedStudents);
     }
     else {
@@ -2028,10 +2071,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function resizeTextAreaToFitContent(id) {
     let textAreaToResize = document.getElementById(id);
     textAreaToResize.style.height = "auto";
-    console.log(textAreaToResize.scrollHeight)
-    console.log(textAreaToResize.scrollHeight + "px")
     textAreaToResize.style.height = textAreaToResize.scrollHeight + "px";
-    console.log(textAreaToResize.style.height)
     
   }
   function removeAddItemsPopupRow(id) {
@@ -2046,7 +2086,6 @@ document.addEventListener('DOMContentLoaded', () => {
     //make load icon visible
     startLoadingAnimation();
 
-    console.log(addItemRowIDs)
 
     //get and verify valid values
     addItemRowIDs.forEach((id) => {
@@ -2074,8 +2113,6 @@ document.addEventListener('DOMContentLoaded', () => {
         school: document.getElementById(`${id}-school-input`).value
       }
       
-      console.log(rowInfo.cost)
-
     
 
       itemInfo.push(rowInfo);
@@ -2105,7 +2142,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     else {
 
-      console.log(itemInfo)
       //send the info to the backend for processing
       google.script.run.withSuccessHandler((data) => {
         switch (data) {
@@ -2144,9 +2180,10 @@ document.addEventListener('DOMContentLoaded', () => {
           //hide loader icon
           endLoadingAnimation();
         }
-    }).addItemsToDatabase(itemInfo);
+    }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).addItemsToDatabase(itemInfo);
     }
-    console.log(itemInfo)
   }
 
   function saveAddStudentsView() {
@@ -2165,7 +2202,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     //get and verify valid values
     addStudentsRowIDs.forEach((id) => {
-
       let studentIDValue = document.getElementById(`${id}-studentID-input`).value;
       let studentID = null;
 
@@ -2189,7 +2225,6 @@ document.addEventListener('DOMContentLoaded', () => {
       let periodValue = document.getElementById(`${id}-period-input`).value;
       let period = null;
 
-      console.log(periodValue)
       if (periodValue == "") {
         period = null;
       }
@@ -2210,8 +2245,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let classYearValue = document.getElementById(`${id}-classYear-input`).value;
       let classYear = null;
-      console.log("classYear: " + classYearValue);
-      console.log(classYearValue)
       if (classYearValue == "") {
         classYear = null;
       }
@@ -2266,7 +2299,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     else {
       
-      console.log(studentInfo)
       //send the info to the backend for processing
       google.script.run.withSuccessHandler((data) => {
         switch (data) {
@@ -2293,9 +2325,10 @@ document.addEventListener('DOMContentLoaded', () => {
           //hide loader icon
           endLoadingAnimation();
         }
-    }).addStudentsToDatabase(studentInfo);
+    }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).addStudentsToDatabase(studentInfo);
     }
-    console.log(studentInfo)
   }
   let selectedModalStudentID = ''
 
@@ -2342,8 +2375,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         google.script.run.withSuccessHandler((data) => {
-          console.log(data)
           refresh()
+        }).withFailureHandler((error) => {
+          alertUserAboutServerError(error);
         }).editItemsInDatabase(JSON.stringify([dataToWrite]));
 
         refresh();
@@ -2373,9 +2407,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         startLoadingAnimation()
         google.script.run.withSuccessHandler((data) => {
-          console.log(data)
           refresh()
-        }).editStudentsInDatabase(JSON.stringify([dataToWrite]));
+        }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).editStudentsInDatabase(JSON.stringify([dataToWrite]));
         
 
 
@@ -2456,11 +2491,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function closeModalDialog() {
 
+
     document.getElementById("deleteButton").style.display="block"; //unhide the delete button (since opening some windows hides it)
 
     let popupModal = document.getElementById("popup-modal");
 
     popupModal.classList.add("hidden");
+
+    //hide all the child popup windows
+    document.getElementById("popup-student-details-content").classList.add("hidden");
+    document.getElementById("popup-add-items-content").classList.add("hidden");
+    document.getElementById("popup-add-students-content").classList.add("hidden");
+    document.getElementById("popup-rental-details-content").classList.add("hidden");
+    document.getElementById("scanning-mode-popup").classList.add("hidden");
+    document.getElementById("reports-view-popup").classList.add("hidden");
 
     popupModal.getElementsByTagName("div")[0].scrollIntoView();
 
@@ -2501,16 +2545,12 @@ document.addEventListener('DOMContentLoaded', () => {
         fullRow[2] = data
 endLoadingAnimation();
         document.getElementById("popup-modal-title").innerHTML = "Item Details";
-    document.getElementById("popup-student-details-content").classList.add("hidden");
-    document.getElementById("popup-add-items-content").classList.add("hidden");
-    document.getElementById("popup-add-students-content").classList.add("hidden");
-    document.getElementById("popup-rental-details-content").classList.add("hidden");
+    
     document.getElementById("popup-item-details-content").classList.remove("hidden");
 
      const popupItemDetailsTable = document.getElementById("popup-item-details-table");
     selectedModalItemID = fullRow[3];
 
-    console.log(JSON.stringify(items, null, 0))
     popupItemDetailsTable.querySelectorAll('tr').forEach(function(row, index) {
       const secondCell = row.children[1];
 
@@ -2560,6 +2600,8 @@ endLoadingAnimation();
 
     document.getElementById("popup-modal").classList.remove("hidden");
     toast(JSON.stringify(fullRow));
+      }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
       }).findMakeModelBasedOnAssetTag(fullRow[3]);
 
     
@@ -2582,10 +2624,7 @@ endLoadingAnimation();
     fullRow = JSON.parse(atob(fullRow));
     
     document.getElementById("popup-modal-title").innerHTML = "Rental Details";
-    document.getElementById("popup-student-details-content").classList.add("hidden");
-    document.getElementById("popup-add-items-content").classList.add("hidden")
-    document.getElementById("popup-add-students-content").classList.add("hidden")
-    document.getElementById("popup-item-details-content").classList.add("hidden")
+    
     document.getElementById("popup-rental-details-content").classList.remove("hidden")
 
     const popupRentalDetailsTable = document.getElementById("popup-rental-details-table");
@@ -2613,10 +2652,7 @@ endLoadingAnimation();
 
   
     document.getElementById("popup-modal-title").innerHTML = "Add Items View";
-    document.getElementById("popup-student-details-content").classList.add("hidden");
-    document.getElementById("popup-item-details-content").classList.add("hidden");
-    document.getElementById("popup-add-students-content").classList.add("hidden")
-    document.getElementById("popup-rental-details-content").classList.add("hidden")
+    
     document.getElementById("popup-add-items-content").classList.remove("hidden")
 
     document.getElementById("deleteButton").style.display="none";
@@ -2630,10 +2666,7 @@ endLoadingAnimation();
 
   
     document.getElementById("popup-modal-title").innerHTML = "Add Students View";
-    document.getElementById("popup-student-details-content").classList.add("hidden");
-    document.getElementById("popup-item-details-content").classList.add("hidden");
-    document.getElementById("popup-add-items-content").classList.add("hidden")
-    document.getElementById("popup-rental-details-content").classList.add("hidden")
+    
     document.getElementById("popup-add-students-content").classList.remove("hidden")
 
     document.getElementById("deleteButton").style.display="none";
@@ -2646,10 +2679,7 @@ endLoadingAnimation();
     disablePageScroll();
 
     document.getElementById("popup-modal-title").innerHTML = "Student Details";
-    document.getElementById("popup-item-details-content").classList.add("hidden");
-    document.getElementById("popup-add-items-content").classList.add("hidden")
-    document.getElementById("popup-add-students-content").classList.add("hidden")
-    document.getElementById("popup-rental-details-content").classList.add("hidden")
+    
     document.getElementById("popup-student-details-content").classList.remove("hidden")
 
     const popupStudentDetailsTable = document.getElementById("popup-student-details-table");
@@ -2697,7 +2727,9 @@ endLoadingAnimation();
             toast(`${result}`)
             refresh()
             closeModalDialog();
-          }).deleteItemFromInventory([selectedModalItemID]);
+          }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).deleteItemFromInventory([selectedModalItemID]);
           }, 250)
           
         } else {
@@ -2716,7 +2748,9 @@ endLoadingAnimation();
             toast(`${result}`)
             refresh()
             closeModalDialog();
-          }).deleteStudentsFromDatabase([selectedModalStudentID]);
+          }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).deleteStudentsFromDatabase([selectedModalStudentID]);
           }, 250)
           
         } else {
@@ -2774,22 +2808,17 @@ endLoadingAnimation();
     }
     else {
       
-      console.log(date)
       //remove unnessesary zeros, for example 2024-03-02 -> 2024-3-2
       date = date.replace("/", "-")
       date = date.replace("\\", "-")
       date = date.split("-")
-      console.log(date)
       dateTemp = [];
       date.forEach( (str) => {
-        console.log("a: "+ str)
         dateTemp.push(String(Number(str))) //remove leading zeros
       })
       date = dateTemp;
-      console.log("AH: " + date)
       date = date.join("-")
 
-      console.log(date);
 
       date = new Date(date);
 
@@ -2832,7 +2861,6 @@ endLoadingAnimation();
         assetTag: `${row["assetTagNumber"]}`,
         status: `${row["status"]}`,
         school: `${row["school"]}`,
-        location: `${row["location"]}`,
         rent: `
           <button 
             onclick='makeARental()' class="hidden"
@@ -2875,7 +2903,7 @@ endLoadingAnimation();
            onclick="checkedItems['${rowData.assetTag}'] = !checkedItems['${rowData.assetTag}'];" /></td>`;
     rowHTML += `<td class="${cellClasses}">${rowData.room}</td>`;
     rowHTML += `<td class="${cellClasses}">${rowData.name}</td>`;
-    rowHTML += `<td class="${cellClasses}">${createSchoolBadge(rowData.location)}</td>`;
+    rowHTML += `<td class="${cellClasses}">${createSchoolBadge(rowData.school)}</td>`;
     rowHTML += `<td class="${cellClasses}">${rowData.assetTag}</td>`;
     row.id = rowData.assetTag;
 
@@ -2920,12 +2948,11 @@ endLoadingAnimation();
  
 
   function renderStudents(students) {
-      console.log(JSON.stringify(students))
       const outputTable = document.getElementById("student-table");
       let tbody = outputTable.querySelector("tbody");
       tbody.innerHTML = ``; 
 
-
+      
 
 
       for (const [id, student] of Object.entries(students)) {
@@ -2939,7 +2966,6 @@ endLoadingAnimation();
         const checkbox = document.createElement("td")
         checkbox.className="p-4 align-middle [&:has([role=checkbox])]:pr-0"
         checkbox.innerHTML=`<input type="checkbox" id="item-checkbox-${id}" onclick="checkedStudents['${id}'] = !checkedStudents['${id}'];" />`
-        console.log(`<input type="checkbox" id="item-checkbox-${id}" onclick="checkedStudents['${id}'] = !checkedStudents['${id}'];" />`)
         const cellId = document.createElement("td");
         cellId.className = "p-4 align-middle [&:has([role=checkbox])]:pr-0"
         cellId.textContent = student.id;
@@ -2999,13 +3025,12 @@ endLoadingAnimation();
     }
 
     function renderRentals(students, rentals) {
+      
       const outputTable = document.getElementById("rental-table");
       let tbody = outputTable.querySelector("tbody");
       //tbody.innerHTML = ``; 
 
-      console.log("students: ", students)
-      console.log("rentals: ", rentals)
-
+      //alert(y); 1532
        google.script.run.withSuccessHandler((data) => {
         let items = JSON.parse(data)
 
@@ -3030,7 +3055,6 @@ endLoadingAnimation();
             // The item has been found
             let item = findItemStatus[0]; // You can access the first match, if there are multiple
             school = item.school;
-            console.log(item);
           } else {
             // Item not found
             console.log("Item not found.");
@@ -3066,6 +3090,8 @@ endLoadingAnimation();
 
 
       }
+      }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
       }).getJSON("Items");
 
     
@@ -3075,6 +3101,10 @@ endLoadingAnimation();
 
   function openScanningMode() {
     disablePageScroll();
+
+    document.getElementById("popup-modal-title").innerHTML = "Item Details";
+
+    document.getElementById("popup-modal").classList.remove("hidden");
 
     document.getElementById(`scanning-mode-popup`).classList.remove(`hidden`);
     let scanningModeInputBox = document.getElementById(`scanning-mode-input-box`);
@@ -3100,7 +3130,6 @@ endLoadingAnimation();
     /*Modified from https://www.w3schools.com/howto/howto_js_trigger_button_enter.asp */
     scanningModeInputBox.addEventListener("keypress", function(event) {
     
-    console.log("event.key: " + event.key)
     // If the user presses the "Enter" key on the keyboard
     if (event.key == "Enter") {
       // Cancel the default action, if needed
@@ -3118,7 +3147,7 @@ endLoadingAnimation();
   function openReportsView() {
 
     disablePageScroll()
-
+    document.getElementById(`popup-modal`).classList.remove(`hidden`);
     document.getElementById(`reports-view-popup`).classList.remove(`hidden`);
   }
 
@@ -3129,7 +3158,7 @@ endLoadingAnimation();
     let currentTime = Date.now()
     
 
-    console.log(currentTime - previousTime)
+    // console.log(currentTime - previousTime)
 
     //if a user types two characters within 50ms of eachother update the quick key press counter
     if (currentTime - previousTime < 70) {
@@ -3214,8 +3243,8 @@ endLoadingAnimation();
       let code2Type = getCodeType(scanningModeCodesTemp[1])
 
       //once that is done, make sure there are no errors and try to create a new rental
-      console.log("code1Type: " + code1Type);
-      console.log("code2Type: " + code2Type);
+      // console.log("code1Type: " + code1Type);
+      // console.log("code2Type: " + code2Type);
 
 
       switch (code1Type)
@@ -3271,7 +3300,7 @@ endLoadingAnimation();
         return 100
       }
 
-      console.log("Student: " + studentCode + "     Item: " + itemCode )
+      // console.log("Student: " + studentCode + "     Item: " + itemCode )
 
 
 
@@ -3280,8 +3309,23 @@ endLoadingAnimation();
         
         //if the scanning mode is create, try to create a rental
         if (scanningMode == "create") {
-           let dateIntendedToRet = prompt("What date would you like this rental to be returned? Use XX/XX/XXXX (eg. 06/12/2025)")
+           let dateIntendedToRet = prompt("What date would you like this rental to be returned? Please use MM/DD/YYYY or MM-DD-YYYY (eg. 06/12/2025)")
 
+          //do some checks on the date input before sending to the backend (the data should be checked by the backend but for these cases the data is already known to be invalid so no use wasting time sending it to the backend (and the check == null handles the prompt cancel button being pressed which was previously being assumed to be the UNIX epoch intead of an invalid date))
+          
+          //check whether the user didn't enter a string into the date prompt
+          if (dateIntendedToRet == "") {
+            scanningModeFlashAndReset("error", "Please enter a return date by typing a date in MM/DD/YYYY or MM-DD-YYYY format") //flash the screen red for a second to indicate failure then reset for more codes
+                return 11;
+          }
+
+          //check whether the user pressed cancel on the prompt for a date
+          else if (dateIntendedToRet == null) {
+            scanningModeFlashAndReset("error", "Aborted") //flash the screen red for a second to indicate failure then reset for more codes
+                return 12;
+          }
+
+          //send the data to the backend
             google.script.run.withSuccessHandler((data) => {
 
             //handle different possible responses
@@ -3289,22 +3333,31 @@ endLoadingAnimation();
               case "Can't create new rental, the student ID specified is not in the database":
                 scanningModeFlashAndReset("error", "Can't create new rental, the student ID '" + studentCode + "' is not in the database") //flash the screen red for a second to indicate failure then reset for more codes
                 return 6;
-                break;
               case "Can't create new rental, the item has a status of 'Out'":
                 scanningModeFlashAndReset("error", "Can't create new rental, the item already has a status of '" + items[itemCode]["status"] + "'") //flash the screen red for a second to indicate failure then reset for more codes
-                break;
-                return 7
+                return 7;
               case "Can't create new rental, the item has a status of 'Repair'":
                 scanningModeFlashAndReset("error", "Can't create new rental, the item has a status of 'repair'") //flash the screen red for a second to indicate failure then reset for more codes
-                break;
-                return 7
+                return 8;
+              case "Invalid return date provided.":
+                scanningModeFlashAndReset("error", "Invalid return date provided. Please try again and provide a date in MM/DD/YYYY or MM-DD-YYYY format") //flash the screen red for a second to indicate failure then reset for more codes
+                return 9;
               case "success":
-                console.log("succeded in creating new rental for student '" + studentCode + "' and item '" + itemCode + "'")
+                console.log("Succeded in creating new rental for student '" + studentCode + "' and item '" + itemCode + "'")
                 scanningModeFlashAndReset("success") //flash the screen green for a second to indicate sucess then reset for more codes
+                return 0;
+              case "succeeded in creating rental, however email send failed":
+                scanningModeFlashAndReset("partial_success", "Succeded in creating new rental for student '" + studentCode + "' and item '" + itemCode + "', however. Sending an email reciept to the student failed.") //flash the screen green for a second to indicate sucess then reset for more codes
+                return 13;
+              default:
+                scanningModeFlashAndReset("error", "Unknown message returned from server. Here is the message: '" + data + "'"); //flash the screen red for a second to indicate failure then reset for more codes
+                return 10;
               
             }
 
-          }).createRental(studentCode, itemCode, dateIntendedToRet);
+          }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).createRental(studentCode, itemCode, dateIntendedToRet);
 
         }
         //if the scanning mode is return then try to return the item
@@ -3324,7 +3377,9 @@ endLoadingAnimation();
                 scanningModeFlashAndReset("error", "Error returning rental: error message from server was '" + data2 + "'") //flash the screen red for a second to indicate failure then reset for more codes
                 return 9;
             }
-            }).returnRentals([itemCode], studentCode);
+            }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).returnRentals([itemCode], studentCode);
         }
       }
         
@@ -3341,10 +3396,13 @@ endLoadingAnimation();
   function scanningModeFlashAndReset(type, errorMessage=null) {
     let color = "#FFFFFF"
     if (type == "error") {
-      color = "#fb3e33"
+      color = "#fb3e33";
+    }
+    else if (type == "partial_success") {
+      color = "#ebff14";
     }
     else if (type == "success") {
-      color = "#5dfb91"
+      color = "#5dfb91";
     }
     //make the loading icon hidden again
     endLoadingAnimation();
@@ -3409,13 +3467,14 @@ endLoadingAnimation();
   }
   function closeScanningMode() {
     document.getElementById(`scanning-mode-popup`).classList.add(`hidden`);
-
+    closeModalDialog();
     scanningModeInputBox.removeEventListener("keypress", processScanningModeKeyUp);
 
     refresh()
   }
   function closeReportsView() {
     document.getElementById(`reports-view-popup`).classList.add(`hidden`);
+    closeModalDialog();
     restorePageScroll();
   }
 
@@ -3496,7 +3555,7 @@ endLoadingAnimation();
         //let wrappedText = doc.splitTextToSize(JSON.stringify(data), 200)
         //doc.text(wrappedText, 5, 5);  
 
-        console.log(data)
+        // console.log(data)
         // Or use javascript directly:
         
         doc.autoTable(data)
@@ -3526,7 +3585,9 @@ endLoadingAnimation();
       //remove the generating indicator
       document.getElementById(`indicator-${reportType}`).remove();
      
-    }).generateReport(reportType, timespanStart, timespanEnd);
+    }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).generateReport(reportType, timespanStart, timespanEnd);
     }
     
   }
@@ -3535,7 +3596,9 @@ endLoadingAnimation();
   function viewPastRentals() {
     google.script.run.withSuccessHandler((data) => {
       alert(data);
-    }).getSpreadsheetURL();
+    }).withFailureHandler((error) => {
+        alertUserAboutServerError(error);
+      }).getSpreadsheetURL();
 
   }
 
@@ -3579,6 +3642,14 @@ endLoadingAnimation();
     document.getElementById("loading").style.visibility = "hidden";
     restorePageScroll();
   }
+  function alertUserAboutServerError(error) {
+    console.error("Server threw an error: " + JSON.stringify(error));
+    alert("The server encountered an error: '" + JSON.stringify(error) + "'");
+    refresh();
+    endLoadingAnimation();
+    
+  }
+  console.log("finished executing main JS");
   </script>
   <!-- End of js to remove and insert at runtime-->
 

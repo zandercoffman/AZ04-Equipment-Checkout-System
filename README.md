@@ -10,6 +10,9 @@ Try here: <a href="https://script.google.com/macros/s/AKfycbzVuh8pVw2QUAqFs71yue
 The Equipment Checkout System only works to an example email.
 
 # 📚 Libraries Used
+
+Some or all of these libraries are included as part of this repository in files starting with the name "3rd_party_library_". These files are distributed under separate license terms from the rest of the files in this repository. Their license terms are included in the files named "3rd_party_library_"
+
 1. **Tailwind CSS**
 2. **Flowbite**
 3. **JsBarcode**

@@ -1,6 +1,8 @@
+Note: This program relies on several libraries. Some or all of these libraries are included in this repository in files starting with "3rd_party_library_". Each of these files contains its own license (or possibly multiple (licenses contained within the "content:" section of one of the "third_party_library_" files overrule any license listed in the "License:" or "License Text:" sections of these files)). The license below only applies to files that do not begin with "3rd_party_library_".
+
 MIT License
 
-Copyright (c) 2025 Zander Coffman
+Copyright (c) 2025-2026 Zander Coffman, Daniel Briggs
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

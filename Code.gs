@@ -84,8 +84,60 @@ function getSetupPage() {
   return HtmlService.createHtmlOutputFromFile("setup").setTitle("Equipment Checkout System Setup");
 }
 
-function doGet(e) {
+//this function takes a file name and library name
+//reads the file (after prepending "3rd_party_library_"), splits it to find only the code for "libraryName" and returns it as text
+function include3rdPartyLibrary(fileName) {
 
+  //this is the alternative option that seems to work for reading the contents of the libraries then getting it as a string without unwanted sanitizing steps corrupting the libraries
+  let libraryContentAsHTMLTemplate = HtmlService.createTemplateFromFile('3rd_party_library_' + fileName);
+  let libraryContentAsString = libraryContentAsHTMLTemplate.getRawContent();
+  
+  if (libraryContentAsString.includes("<style>")) {
+    //this is a library containing CSS
+    //just return it directly
+    return libraryContentAsString;
+  }
+  else if (libraryContentAsString.includes("<script>")) {
+    //this is a library containing JS
+    let wrapperScript = `
+    <script>
+      console.log("Started executing ${fileName}");
+      (function (){
+        
+        let decoder = new TextDecoder();
+        let libraryContent = decoder.decode(Uint8Array.fromBase64("${Utilities.base64Encode(libraryContentAsString, Utilities.Charset.UTF_8)}"));  //encode to base64 to pass to client to avoid Google Apps Script santizing scripts that assign strings with "https://somewebsite.exampledomain" to variables (previously some scripts with URLS in them were having everything on a line after https:// truncated (including code after the string with the URL was done))). Then decode on the client. See encoding documentation on https://developers.google.com/apps-script/reference/utilities/utilities
+
+        libraryContent = \`
+        console.log("Started executing ${fileName} inner");
+        \` + libraryContent.slice(8, libraryContent.length-9) + 'console.log("Finished executing ${fileName} inner");' 
+
+
+        let libraryParentElement = document.createElement("script");
+        
+
+        libraryParentElement.innerHTML = libraryContent; //insert the library content directly into the libraryParentElement script tag. It should then be parsed by the browser and run
+
+        document.currentScript.parentNode.appendChild(libraryParentElement);
+
+        })();
+      console.log("Finished executing ${fileName}");
+    </script>
+    `
+    // Logger.log("\n'n");
+    // Logger.log(wrapperScript.slice(0,1000));
+    // Logger.log("-----------");
+    // Logger.log(wrapperScript.slice(wrapperScript.length-1000));
+    // Logger.log("\n\n");
+    return wrapperScript
+  }
+  else {
+    //something else
+    return libraryContentAsString;
+  }
+  
+
+}
+function doGet(e) {
 
   if (e.pathInfo == null || e.pathInfo == "" || e.pathInfo == "/index" || e.pathInfo == "/index.html") {
 
@@ -97,93 +149,15 @@ function doGet(e) {
       return getSetupPage();
     }
     else {
-      let htmlCode = ScriptApp.getResource('index').getDataAsString();
+      let htmlResponse =  HtmlService.createTemplateFromFile('index').evaluate()
 
 
-      /*htmlParts = htmlCode.split("</script>")
-      
-      let output = HtmlService.createHtmlOutput("")
-
-      for (let i = 0; i<htmlParts.length - 2; i++) {
-        let part = htmlParts[i]
-
-        output.append(part)
-        output.append("/")
-        output.append("/# sourceURL=javascript.js")
-        output.append("</script>")
-      }
-      
+      htmlResponse.setTitle("Equipment Checkout System");
 
 
-      let secondToLastPart = htmlParts[htmlParts.length - 2]
-
-      output.append(secondToLastPart)
-      output.append("/")
-      output.append("/# sourceURL=javascript.js")
-      output.append("</script>")
-
-
-
-      output.append(htmlParts[htmlParts.length - 1])
-      return output;*/
-
-
-
-
-
-      //Did this weird workaround to insert the js at runtime on the client instead of just doing return HTMLService.createHTMLServiceFromFile('index') with the js being in a script tag to resolve the following error
-      //Uncaught SyntaxError: "" string literal contains an unescaped line break userCodeAppPanel:1045:20
-      //userCodeAppPanel is something that google app scripts creates that might contain the code we put in script tags, and when clicking the error line number it took me to a long one liner file that I don't think even had code we wrote
-      //with this new weird workaround with js inserted at runtime, the error is gone (don't know why)
-
-      //////////////////////////
-      //////////////////////////
-      //I might have figured out the weird error (since there was a ' in a new item name and stuff wasn't base64 encoded for the openItemDetails function (now it is so this workaround might no longer be needed))
-      ///////////////////////////
-      ///////////////////////////
-
-      //split apart the index.html file and extract the js which needs to be removed and inserted at runtime to fix the weird error above
-      htmlParts = htmlCode.split("<!-- Start of js to remove and insert at runtime-->")
-      htmlPart0 = htmlParts[0];
-      htmlParts2 = htmlParts[1].split("<!-- End of js to remove and insert at runtime-->")
-      htmlPart1 = htmlParts2[0];
-      htmlPart2 = htmlParts2[1];
-
-      htmlParts = [htmlPart0, htmlPart1, htmlPart2]
-
-      if (htmlParts.length != 3) {
-        Logger.log("error generating index.html in Code.gs")
-        return HtmlService.createHtmlOutput("error generating index.html in Code.gs")
-      }
-
-      let output = HtmlService.createHtmlOutput(htmlParts[0]) //start creating the html object to return using the first part of the html up to where the js needs to be added
-
-
-
-      let jsCode = htmlParts[1].split('<script>')[1].split("</script>")[0] //remove the script tags from htmlParts[1] to extract only the js code
-
-
-      //this adds a script tag with a self executing function whose only purpose is to add another script tag at runtime on the client with the actual js which was extracted from index.html above
-      //modified from https://stackoverflow.com/questions/74050409/how-to-map-client-side-code-to-source-code
-      output.append(`<script>
-      (function () {
-      const code = decodeURIComponent(atob('${Utilities.base64Encode(
-        encodeURIComponent(jsCode)
-      )}'));
-      const scriptEl = document.createElement('script');
-      scriptEl.textContent = code;
-      //scriptEl.setAttribute("type", "module");
-      document.body.appendChild(scriptEl);
-      })();
-      </script>`)
-
-
-
-      //add the last bit of the html
-      output.append(htmlParts[2])
 
       //return the html
-      return output.setTitle("Equipment Checkout System");
+      return htmlResponse;
 
 
     }
@@ -202,8 +176,6 @@ function getJSON(element) {
     case "Items":
       return JSON.stringify(getItems());
     case "Rentals":
-      Logger.log("Getting rental info")
-      Logger.log("Rental Info:" + JSON.stringify(getRentals()))
       return JSON.stringify(getRentals())
     default:
       return ""
@@ -224,7 +196,6 @@ function createRental(itemID, studentID) {
 // REMEMBER IT DOES NOT HAVE THE "S" in the name
 //take a paramater students as input (this should be of the structure [{"id": "ID1", "classYear": "CLASS_YEAR1", "period": "PERIOD1", "name": "NAME1"}, {"id": "ID2", "classYear": "CLASS_YEAR2", "period": "PERIOD2", "name": "NAME2"}])
 function addStudentsToDatabase(students) {
-  Logger.log("AHHHHH: " + JSON.stringify(students));
   let currentStudents = Object.keys(getStudents());
 
   //check that there are no errors before editing the database
@@ -339,40 +310,41 @@ function editItemsInDatabase(items) {
 
 
     //convert the data into the format .setValues() wants and update each item
-    let dataToWrite = []
+    const sheetValues = dataRange.getValues(); //read dataRange here instead of inside the for loop to reduce repeated reads
+
     items.forEach((item) => {
-      dataToWrite = [[item.roomArea, item.itemDescription, item.makeModel, item.assetTagNumber, item.serialNumber, item.notes, item.status, item.rentalID, item.school]];
+      const dataToWrite = [[item.roomArea, item.itemDescription, item.makeModel, item.assetTagNumber, item.serialNumber, item.notes, item.status, item.rentalID, item.school]];
       let wroteData = false;
 
-      for (let r = 0; r < height; r++) {
-        let id = dataRange.getValues()[r][4]
-        Logger.log(id)
+      for (let r = 0; r < sheetValues.length; r++) {
+        let id = sheetValues[r][4];
 
         if (id == item.assetTagNumber) {
-
           let rangeToWrite = itemSheet.getRange(r + 1, 2, 1, 9);
-          rangeToWrite.setValues(dataToWrite)
-          Logger.log("Wrote data")
+          rangeToWrite.setValues(dataToWrite);
+          Logger.log("Wrote data for asset: " + item.assetTagNumber);
           wroteData = true;
           break;
         }
       }
 
       if (!wroteData) {
-        Logger.log("Failed to update item: " + item);
-        return "Failed to update item: " + item;
+        Logger.log("Failed to update item: " + JSON.stringify(item));
+        throw new Error("Failed to update item: " + item.assetTagNumber);
       }
-
+      
     });
+
+    return "success";
 
   }
 }
 
 //take a paramater students as input (this should be of the structure [{id: "ID", classYear: "CLASSYEAR", period: "PERIOD", name: "NAME"}])
 function editStudentsInDatabase(students) {
-  Logger.log(students)
+  // Logger.log(students)
   students = JSON.parse(students)
-  Logger.log(students)
+  // Logger.log(students)
 
   let currentStudents = Object.keys(getStudents());
 
@@ -433,16 +405,60 @@ function deleteItemsFromInventory(assetTags) {
   var values = range.getValues();
 
   let error = false;
+  Logger.log("Attempting to delete the following items: " + JSON.stringify(assetTags));
 
-  Logger.log("Attempting to delete the following items: " + JSON.stringify(assetTags))
-  assetTags.forEach((assetTag) => {
-    for (var i = 0; i < values.length; i++) {
-      if (values[i][4] == assetTag) {
-        sheet.deleteRow(i + 1);
-        error = true;
+  // Use a Set for faster lookups
+  const assetSet = new Set(assetTags);
+  
+
+
+
+  
+  //Make sure none of these items have outstanding associated rentals before deleting them
+  let itemsWithAssociatedOutstandingRentals = {};
+  let rentals = getRentals();
+  Logger.log(rentals);
+  
+  Object.values(rentals).forEach((rental) => {
+    if (rental["status"] != "Returned") {
+      let thisRentalsAssetTag = rental["itemID"];
+
+      //if the list of asset tags to delete includes the itemID field of this rental, then add this item and rental to the dictionary of itemsWithAssociatedOutstandingRentals
+      if (assetSet.has(thisRentalsAssetTag)) {
+        if (itemsWithAssociatedOutstandingRentals[thisRentalsAssetTag]) {
+          itemsWithAssociatedOutstandingRentals[thisRentalsAssetTag].push(rental["checkedOutTo"]);
+        }
+        else {
+          itemsWithAssociatedOutstandingRentals[thisRentalsAssetTag] = [rental["checkedOutTo"]];
+        }
+        
       }
     }
-  })
+  });
+  let err = "The following items have associated outstanding rentals that must be resolved before deleting the items from the database (Please either return these rentals or deselect these items associated with outstanding rentals): \n\n";
+  if (Object.keys(itemsWithAssociatedOutstandingRentals).length > 0) {
+    let students = getStudents();
+    let items = getItems();
+    Object.keys(itemsWithAssociatedOutstandingRentals).forEach((assetTag) => {
+      err += items[assetTag]["itemDescription"] + " (Asset Tag Number: " + assetTag + "): \n";
+      itemsWithAssociatedOutstandingRentals[assetTag].forEach((studentID) => {
+        err += students[studentID]["name"] + " (Student ID Number: " + studentID + ") ";
+      });
+      err += "\n\n";
+    });
+
+    throw new Error(err);
+  }
+
+
+  // Iterate bottom-up so row deletions don't shift remaining indices
+  for (let i = values.length - 1; i >= 0; i--) {
+    const rowAsset = values[i][4];
+    if (assetSet.has(rowAsset)) {
+      sheet.deleteRow(i + 1); // sheet rows are 1-indexed
+      error = true;
+    }
+  }
 
   return error;
 }
@@ -454,24 +470,63 @@ function deleteItemFromInventory(assetTag) {
 
 
 function deleteStudentsFromDatabase(ids) {
-  Logger.log(ids)
+
+  
+
+  // Logger.log(ids)
   const sheet = datasheet.getSheetByName("Students");
   var range = sheet.getDataRange();
   var values = range.getValues();
 
   let error = false;
 
-  //remove the header row from the data
-  values.shift();
+  // Use a Set for quick membership tests
+  const idSet = new Set(ids);
 
-  ids.forEach((id) => {
-    for (var i = 0; i < values.length; i++) {
-      if (values[i][0] == id) {
-        sheet.deleteRow(i + 2);
-        error = true;
+  //Make sure none of these students have outstanding rentals before deleting them (otherwise the frontend will have problems when trying to render rentals to delted students)
+  let studentsWithOutstandingRentals = {};
+  let rentals = getRentals();
+  Logger.log(rentals);
+  
+  Object.values(rentals).forEach((rental) => {
+    if (rental["status"] != "Returned") {
+      let thisRentalsStudentID = rental["checkedOutTo"];
+
+      //if the list of student IDs to delete includes the checkedOutTo field of this rental, then add this student and rental to the dictionary of studentsWithOutstandingRentals
+      if (idSet.has(thisRentalsStudentID)) {
+        if (studentsWithOutstandingRentals[thisRentalsStudentID]) {
+          studentsWithOutstandingRentals[thisRentalsStudentID].push(rental["itemID"]);
+        }
+        else {
+          studentsWithOutstandingRentals[thisRentalsStudentID] = [rental["itemID"]];
+        }
+        
       }
     }
-  })
+  });
+  let err = "The following students have rentals that are not returned that must be resolved before deleting the students from the database (Please either return these rentals or deselect these students with outstanding rentals): \n\n";
+  if (Object.keys(studentsWithOutstandingRentals).length > 0) {
+    let students = getStudents();
+    let items = getItems();
+    Object.keys(studentsWithOutstandingRentals).forEach((studentID) => {
+      err += students[studentID]["name"] + " (Student ID Number: " + studentID + "): \n";
+      studentsWithOutstandingRentals[studentID].forEach((itemID) => {
+        err += items[itemID]["name"] + " (Asset Tag Number: " + itemID + ") ";
+      });
+      err += "\n\n";
+    });
+
+    throw new Error(err);
+  }
+
+  // Iterate bottom-up, skipping the header at index 
+  for (let i = values.length - 1; i >= 1; i--) {
+    const rowId = values[i][0];
+    if (idSet.has(rowId)) {
+      sheet.deleteRow(i + 1); // convert 0-based to 1-based row index
+      error = true;
+    }
+  }
 
   return error;
 }
@@ -504,6 +559,11 @@ function getStudents() {
   //find the sheet
   let studentSheet = datasheet.getSheetByName("Students");
 
+  if (!studentSheet) {
+    Logger.log("getStudents: Students sheet not found");
+    return {};
+  }
+
   //find the range which contains data
   let dataRange = studentSheet.getDataRange();
 
@@ -513,20 +573,36 @@ function getStudents() {
   //a dictionary which will be used to store student info
   let students = {};
 
-  //remove the first row containing headers
-  dataToConvert.shift();
 
+  // remove header row if present
+  if (dataToConvert.length > 0) {
+    dataToConvert.shift();
+  }
 
-  //for each student in the table convert the data into an easier to use format and append it to the students dictonary
-  for (student of dataToConvert) {
+  // for each student in the table convert the data into an easier to use format and append it to the students dictionary
+  for (let i = 0; i < dataToConvert.length; i++) {
+    const row = dataToConvert[i];
+    // Skip empty rows
+    if (!row || row.length === 0) continue;
 
-    students[student[0]] =
-    {
-      id: student[0],
-      classYear: student[1],
-      period: student[2],
-      name: student[3]
+    // Expect at least 4 columns: id, classYear, period, name
+    if (row.length < 4) {
+      Logger.log("getStudents: skipping malformed row " + (i + 2) + ": " + JSON.stringify(row));
+      continue;
     }
+
+    const id = String(row[0]).trim();
+    if (!id) {
+      Logger.log("getStudents: skipping row with empty id at " + (i + 2));
+      continue;
+    }
+
+    students[id] = {
+      id: id,
+      classYear: String(row[1] || "").trim(),
+      period: String(row[2] || "").trim(),
+      name: String(row[3] || "").trim()
+    };
   }
 
   //return the student info
@@ -538,6 +614,11 @@ function getItems() {
   //find the sheet
   let itemSheet = datasheet.getSheetByName("Items");
 
+  if (!itemSheet) {
+    Logger.log("getItems: Items sheet not found");
+    return {};
+  }
+
   //find the range which contains data
   let dataRange = itemSheet.getDataRange();
 
@@ -548,25 +629,40 @@ function getItems() {
   //a dictionary which will be used to store item info
   let items = {};
 
-  //remove the first row containing headers
-  dataToConvert.shift();
 
+  // remove header row if present
+  if (dataToConvert.length > 0) {
+    dataToConvert.shift();
+  }
 
-  //for each item in the table convert the data into an easier to use format and append it to the items dictonary
-  for (item of dataToConvert) {
+  // for each item in the table convert the data into an easier to use format and append it to the items dictionary
+  for (let i = 0; i < dataToConvert.length; i++) {
+    const row = dataToConvert[i];
+    if (!row || row.length === 0) continue;
 
-    items[item[4]] =
-    {
-      roomArea: item[1],
-      itemDescription: item[2],
-      location: item[9],
-      assetTagNumber: item[4],
-      serialNumber: item[5],
-      notes: item[6],
-      status: item[7],
-      rentalID: item[8],
-      school: item[9]
+    // Expect at least 5 columns to have an asset tag at index 4
+    if (row.length < 5) {
+      Logger.log("getItems: skipping malformed row " + (i + 2) + ": " + JSON.stringify(row));
+      continue;
     }
+
+    const assetTag = String(row[4]).trim();
+    if (!assetTag) {
+      Logger.log("getItems: skipping row with empty asset tag at " + (i + 2));
+      continue;
+    }
+
+    items[assetTag] = {
+      roomArea: String(row[1] || "").trim(),
+      itemDescription: String(row[2] || "").trim(),
+      makeModel: String(row[3] || "").trim(),
+      assetTagNumber: assetTag,
+      serialNumber: String(row[5] || "").trim(),
+      notes: String(row[6] || "").trim(),
+      status: String(row[7] || "").trim(),
+      rentalID: String(row[8] || "").trim(),
+      school: String(row[9] || "").trim()
+    };
   }
 
   //return the item info
@@ -621,9 +717,7 @@ function buildRentalReceiptHTML({ studentID, itemName, assetTag, rentalID, dateO
 
     </p>
 
-    <p style="text-align: center; font-size: 12px; color: #999; margin-top: 20px;">
-      © ${new Date().getFullYear()} Tempe Union High School District
-    </p>
+    
   </div>
   `;
 }
@@ -634,6 +728,9 @@ function createRental(studentID, assetTag, dateToReturn) {
 
   let items = getItems();
   let item = items[assetTag];
+  if (!item) {
+    return "Can't create new rental, the specified item was not found in the database";
+  }
   let itemName = item.itemDescription || "Unnamed Item";
 
 
@@ -713,10 +810,9 @@ function createRental(studentID, assetTag, dateToReturn) {
     let studentEmail = `s${studentID}@stu.tempeunion.org`;
 
 
-    //Sends email
+    // Attempt to send email; don't mask failures — report them.
+    let emailSent = true;
     try {
-
-
       let rentalIDStr = newRentalID.toString();
       let dateOutStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
 
@@ -730,7 +826,6 @@ function createRental(studentID, assetTag, dateToReturn) {
         contactEmail: teacherEmail
       });
 
-
       let subject = `Rental Confirmation: ${itemName}`;
 
       MailApp.sendEmail({
@@ -739,10 +834,10 @@ function createRental(studentID, assetTag, dateToReturn) {
         htmlBody: html
       });
     } catch (err) {
-      Logger.log(JSON.stringify(err));
-    } finally {
-      return "success"
+      Logger.log('Email send error: ' + JSON.stringify(err));
+      emailSent = false;
     }
+    return emailSent ? "success" : "succeeded in creating rental, however email send failed";
 
 
   }
@@ -769,8 +864,8 @@ function getRentals() {
 
   //for each rental in the table convert the data into an easier to use format and append it to the rentals dictonary
   for (rental of dataToConvert) {
-    Logger.log("rentalInfo: ")
-    Logger.log(rental[3])
+    // Logger.log("rentalInfo: ")
+    // Logger.log(rental[3])
     rentals[rental[0]] =
     {
       rentalID: Number.parseInt(rental[0]),
@@ -1045,8 +1140,8 @@ function generateReport(reportType, timespanStart, timespanEnd) {
 
 
       Object.keys(itemStatistics).forEach((id) => {
-        Logger.log(id)
-        Logger.log(items)
+        // Logger.log(id)
+        // Logger.log(items)
         output["body"].push([items[id]["assetTagNumber"], items[id]["makeModel"], items[id]["itemDescription"], itemStatistics[id]]);
       })
     }
@@ -1059,11 +1154,11 @@ function generateReport(reportType, timespanStart, timespanEnd) {
       let itemStatistics = [];
       let error = "";
       Object.keys(items).forEach((key) => {
-        Logger.log(items[key]["status"])
+        // Logger.log(items[key]["status"])
         if (items[key]["status"] == "Lost") {
 
-          Logger.log(items[key]["rentalID"])
-          Logger.log(items[key])
+          // Logger.log(items[key]["rentalID"])
+          // Logger.log(items[key])
 
           try {
             itemStatistics.push([key, items[key]["makeModel"], items[key]["itemDescription"], rentals[items[key]["rentalID"]]["checkedOutTo"], rentals[items[key]["rentalID"]]["dateCheckedOut"], rentals[items[key]["rentalID"]]["dateExpectedToReturn"]]);
@@ -1122,7 +1217,7 @@ function doSomething() {
 
   //Logger.log(addStudentsToDatabase([{id: "55555", classYear: "5555", period: "5", name: "five"}, {id: "77777", classYear: "7777", period: "7", name: "seven"}]))
 
-  Logger.log(getPage('addStudents'));
+  // Logger.log(getPage('addStudents'));
 
   output = "I ran";
 
