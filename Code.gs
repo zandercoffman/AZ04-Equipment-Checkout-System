@@ -444,15 +444,17 @@ function deleteStudentsFromDatabase(ids) {
 
   //Make sure none of these students have outstanding rentals before deleting them (otherwise the frontend will have problems when trying to render rentals to delted students)
   let studentsWithOutstandingRentals = {};
-  const rentals = getRentals();
-  rentals.forEach((rental) => {
+  let rentals = getRentals();
+  Logger.log(rentals);
+  
+  Object.values(rentals).forEach((rental) => {
     if (rental["status"] != "Returned") {
       let thisRentalsStudentID = rental["checkedOutTo"];
 
       //if the list of student IDs to delete includes the checkedOutTo field of this rental, then add this student and rental to the dictionary of studentsWithOutstandingRentals
       if (idSet.has(thisRentalsStudentID)) {
         if (studentsWithOutstandingRentals[thisRentalsStudentID]) {
-          studentsWithOutstandingRentals[thisRentalsStudentID].append(rental["itemID"]);
+          studentsWithOutstandingRentals[thisRentalsStudentID].push(rental["itemID"]);
         }
         else {
           studentsWithOutstandingRentals[thisRentalsStudentID] = [rental["itemID"]];
@@ -461,21 +463,22 @@ function deleteStudentsFromDatabase(ids) {
       }
     }
   });
-  let err = "The following have rentals that are not returned that must be resolved before deleting the students from the database (Please either return these rentals or deselect these students with outstanding rentals): \n";
-  if (studentsWithOutstandingRentals != {}) {
-    const students = getStudents();
-    const items = getItems();
-    studentsWithOutstandingRentals.keys().forEach((studentID) => {
-      err += students[studentID]["name"] + " (" + studentID + "): ";
+  let err = "The following students have rentals that are not returned that must be resolved before deleting the students from the database (Please either return these rentals or deselect these students with outstanding rentals): \n\n";
+  if (Object.keys(studentsWithOutstandingRentals).length > 0) {
+    let students = getStudents();
+    let items = getItems();
+    Object.keys(studentsWithOutstandingRentals).forEach((studentID) => {
+      err += students[studentID]["name"] + " (Student ID Number: " + studentID + "): \n";
       studentsWithOutstandingRentals[studentID].forEach((itemID) => {
-        err += items[itemID]["name"] + " (" + itemID + ") \n";
+        err += items[itemID]["name"] + " (Asset Tag Number: " + itemID + ") ";
       });
+      err += "\n\n";
     });
 
     throw new Error(err);
   }
 
-  // Iterate bottom-up, skipping the header at index 0
+  // Iterate bottom-up, skipping the header at index 
   for (let i = values.length - 1; i >= 1; i--) {
     const rowId = values[i][0];
     if (idSet.has(rowId)) {

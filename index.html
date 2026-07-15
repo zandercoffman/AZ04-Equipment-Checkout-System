@@ -1860,7 +1860,19 @@ document.addEventListener('DOMContentLoaded', () => {
         toast(`${result}`)
         refresh()
       }).withFailureHandler((error) => {
+        if (error["message"].length > 134) {
+        
+          if (error["message"].substring(0,133) == "Error: The following students have rentals that are not returned that must be resolved before deleting the students from the database") {
+            alert(error["message"]);
+            endLoadingAnimation();
+          }
+          else {
+            alertUserAboutServerError(error);
+          }
+        }
+        else {
         alertUserAboutServerError(error);
+        }
       }).deleteStudentsFromDatabase(selectedStudents);
     }
     else {
@@ -3622,6 +3634,9 @@ endLoadingAnimation();
   function alertUserAboutServerError(error) {
     console.error("Server threw an error: " + JSON.stringify(error));
     alert("The server encountered an error: '" + JSON.stringify(error) + "'");
+    refresh();
+    endLoadingAnimation();
+    
   }
   console.log("finished executing main JS");
   </script>
