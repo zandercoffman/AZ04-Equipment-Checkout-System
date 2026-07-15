@@ -332,6 +332,7 @@ function editItemsInDatabase(items) {
         Logger.log("Failed to update item: " + JSON.stringify(item));
         throw new Error("Failed to update item: " + item.assetTagNumber);
       }
+      
     });
 
     return "success";
@@ -408,6 +409,47 @@ function deleteItemsFromInventory(assetTags) {
 
   // Use a Set for faster lookups
   const assetSet = new Set(assetTags);
+  
+
+
+
+  
+  //Make sure none of these items have outstanding associated rentals before deleting them
+  let itemsWithAssociatedOutstandingRentals = {};
+  let rentals = getRentals();
+  Logger.log(rentals);
+  
+  Object.values(rentals).forEach((rental) => {
+    if (rental["status"] != "Returned") {
+      let thisRentalsAssetTag = rental["itemID"];
+
+      //if the list of asset tags to delete includes the itemID field of this rental, then add this item and rental to the dictionary of itemsWithAssociatedOutstandingRentals
+      if (assetSet.has(thisRentalsAssetTag)) {
+        if (itemsWithAssociatedOutstandingRentals[thisRentalsAssetTag]) {
+          itemsWithAssociatedOutstandingRentals[thisRentalsAssetTag].push(rental["checkedOutTo"]);
+        }
+        else {
+          itemsWithAssociatedOutstandingRentals[thisRentalsAssetTag] = [rental["checkedOutTo"]];
+        }
+        
+      }
+    }
+  });
+  let err = "The following items have associated outstanding rentals that must be resolved before deleting the items from the database (Please either return these rentals or deselect these items associated with outstanding rentals): \n\n";
+  if (Object.keys(itemsWithAssociatedOutstandingRentals).length > 0) {
+    let students = getStudents();
+    let items = getItems();
+    Object.keys(itemsWithAssociatedOutstandingRentals).forEach((assetTag) => {
+      err += items[assetTag]["itemDescription"] + " (Asset Tag Number: " + assetTag + "): \n";
+      itemsWithAssociatedOutstandingRentals[assetTag].forEach((studentID) => {
+        err += students[studentID]["name"] + " (Student ID Number: " + studentID + ") ";
+      });
+      err += "\n\n";
+    });
+
+    throw new Error(err);
+  }
+
 
   // Iterate bottom-up so row deletions don't shift remaining indices
   for (let i = values.length - 1; i >= 0; i--) {
@@ -428,6 +470,9 @@ function deleteItemFromInventory(assetTag) {
 
 
 function deleteStudentsFromDatabase(ids) {
+
+  
+
   // Logger.log(ids)
   const sheet = datasheet.getSheetByName("Students");
   var range = sheet.getDataRange();
@@ -438,7 +483,43 @@ function deleteStudentsFromDatabase(ids) {
   // Use a Set for quick membership tests
   const idSet = new Set(ids);
 
-  // Iterate bottom-up, skipping the header at index 0
+  //Make sure none of these students have outstanding rentals before deleting them (otherwise the frontend will have problems when trying to render rentals to delted students)
+  let studentsWithOutstandingRentals = {};
+  let rentals = getRentals();
+  Logger.log(rentals);
+  
+  Object.values(rentals).forEach((rental) => {
+    if (rental["status"] != "Returned") {
+      let thisRentalsStudentID = rental["checkedOutTo"];
+
+      //if the list of student IDs to delete includes the checkedOutTo field of this rental, then add this student and rental to the dictionary of studentsWithOutstandingRentals
+      if (idSet.has(thisRentalsStudentID)) {
+        if (studentsWithOutstandingRentals[thisRentalsStudentID]) {
+          studentsWithOutstandingRentals[thisRentalsStudentID].push(rental["itemID"]);
+        }
+        else {
+          studentsWithOutstandingRentals[thisRentalsStudentID] = [rental["itemID"]];
+        }
+        
+      }
+    }
+  });
+  let err = "The following students have rentals that are not returned that must be resolved before deleting the students from the database (Please either return these rentals or deselect these students with outstanding rentals): \n\n";
+  if (Object.keys(studentsWithOutstandingRentals).length > 0) {
+    let students = getStudents();
+    let items = getItems();
+    Object.keys(studentsWithOutstandingRentals).forEach((studentID) => {
+      err += students[studentID]["name"] + " (Student ID Number: " + studentID + "): \n";
+      studentsWithOutstandingRentals[studentID].forEach((itemID) => {
+        err += items[itemID]["name"] + " (Asset Tag Number: " + itemID + ") ";
+      });
+      err += "\n\n";
+    });
+
+    throw new Error(err);
+  }
+
+  // Iterate bottom-up, skipping the header at index 
   for (let i = values.length - 1; i >= 1; i--) {
     const rowId = values[i][0];
     if (idSet.has(rowId)) {
@@ -636,9 +717,7 @@ function buildRentalReceiptHTML({ studentID, itemName, assetTag, rentalID, dateO
 
     </p>
 
-    <p style="text-align: center; font-size: 12px; color: #999; margin-top: 20px;">
-      © ${new Date().getFullYear()} Tempe Union High School District
-    </p>
+    
   </div>
   `;
 }
@@ -758,7 +837,6 @@ function createRental(studentID, assetTag, dateToReturn) {
       Logger.log('Email send error: ' + JSON.stringify(err));
       emailSent = false;
     }
-
     return emailSent ? "success" : "succeeded in creating rental, however email send failed";
 
 
