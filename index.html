@@ -946,7 +946,7 @@ This provides details like student names, usernames, and possibly guardian permi
 
     <!-- ========== MAIN CONTENT: ITEM LIST ==========
      Displays all items in a table:
-       - Basic info (location, name, model, status)
+       - Basic info (school, name, model, status)
        - Selection checkboxes
        - Edit and "More" buttons
        - Action buttons (Add, Generate Barcodes, Delete)
@@ -1031,7 +1031,7 @@ This provides details like student names, usernames, and possibly guardian permi
               <th
                 class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
                 id="items-header-model">
-                Location
+                School
               </th>
               <th
                 class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
@@ -1190,7 +1190,7 @@ This provides details like student names, usernames, and possibly guardian permi
               </th>
               <th
                 class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0">
-                Location
+                School
               </th>
               <th
                 class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0">
@@ -2861,7 +2861,6 @@ endLoadingAnimation();
         assetTag: `${row["assetTagNumber"]}`,
         status: `${row["status"]}`,
         school: `${row["school"]}`,
-        location: `${row["location"]}`,
         rent: `
           <button 
             onclick='makeARental()' class="hidden"
@@ -2904,7 +2903,7 @@ endLoadingAnimation();
            onclick="checkedItems['${rowData.assetTag}'] = !checkedItems['${rowData.assetTag}'];" /></td>`;
     rowHTML += `<td class="${cellClasses}">${rowData.room}</td>`;
     rowHTML += `<td class="${cellClasses}">${rowData.name}</td>`;
-    rowHTML += `<td class="${cellClasses}">${createSchoolBadge(rowData.location)}</td>`;
+    rowHTML += `<td class="${cellClasses}">${createSchoolBadge(rowData.school)}</td>`;
     rowHTML += `<td class="${cellClasses}">${rowData.assetTag}</td>`;
     row.id = rowData.assetTag;
 
