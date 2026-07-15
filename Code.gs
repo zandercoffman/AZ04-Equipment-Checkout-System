@@ -409,6 +409,47 @@ function deleteItemsFromInventory(assetTags) {
 
   // Use a Set for faster lookups
   const assetSet = new Set(assetTags);
+  
+
+
+
+  
+  //Make sure none of these items have outstanding associated rentals before deleting them
+  let itemsWithAssociatedOutstandingRentals = {};
+  let rentals = getRentals();
+  Logger.log(rentals);
+  
+  Object.values(rentals).forEach((rental) => {
+    if (rental["status"] != "Returned") {
+      let thisRentalsAssetTag = rental["itemID"];
+
+      //if the list of asset tags to delete includes the itemID field of this rental, then add this item and rental to the dictionary of itemsWithAssociatedOutstandingRentals
+      if (assetSet.has(thisRentalsAssetTag)) {
+        if (itemsWithAssociatedOutstandingRentals[thisRentalsAssetTag]) {
+          itemsWithAssociatedOutstandingRentals[thisRentalsAssetTag].push(rental["checkedOutTo"]);
+        }
+        else {
+          itemsWithAssociatedOutstandingRentals[thisRentalsAssetTag] = [rental["checkedOutTo"]];
+        }
+        
+      }
+    }
+  });
+  let err = "The following items have associated outstanding rentals that must be resolved before deleting the items from the database (Please either return these rentals or deselect these items associated with outstanding rentals): \n\n";
+  if (Object.keys(itemsWithAssociatedOutstandingRentals).length > 0) {
+    let students = getStudents();
+    let items = getItems();
+    Object.keys(itemsWithAssociatedOutstandingRentals).forEach((assetTag) => {
+      err += items[assetTag]["itemDescription"] + " (Asset Tag Number: " + assetTag + "): \n";
+      itemsWithAssociatedOutstandingRentals[assetTag].forEach((studentID) => {
+        err += students[studentID]["name"] + " (Student ID Number: " + studentID + ") ";
+      });
+      err += "\n\n";
+    });
+
+    throw new Error(err);
+  }
+
 
   // Iterate bottom-up so row deletions don't shift remaining indices
   for (let i = values.length - 1; i >= 0; i--) {

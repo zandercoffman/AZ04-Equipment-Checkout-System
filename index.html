@@ -1828,7 +1828,19 @@ document.addEventListener('DOMContentLoaded', () => {
         toast(`${result}`)
         refresh()
       }).withFailureHandler((error) => {
+        if (error["message"].length > 129) {
+          
+          if (error["message"].substring(0,128) == "Error: The following items have associated outstanding rentals that must be resolved before deleting the items from the database") {
+            alert(error["message"]);
+            endLoadingAnimation();
+          }
+          else {
+            alertUserAboutServerError(error);
+          }
+        }
+        else {
         alertUserAboutServerError(error);
+        }
       }).deleteItemsFromInventory(selectedItems);
     }
     else {
