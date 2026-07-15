@@ -2225,7 +2225,7 @@ document.addEventListener('DOMContentLoaded', () => {
             refresh();
 
 
-            addStudentsRowIDs = [] //clear the list so more students can be added
+            addItemRowIDs = [] //clear the list so more items can be added
             break;
           }
           default: {
@@ -2258,8 +2258,11 @@ document.addEventListener('DOMContentLoaded', () => {
       endLoadingAnimation();
       return 1;
     }
+    //alert(x); //790
+
     //get and verify valid values
     addStudentsRowIDs.forEach((id) => {
+      console.log(`${id}-studentID-input`);
       let studentIDValue = document.getElementById(`${id}-studentID-input`).value;
       let studentID = null;
 
@@ -2367,6 +2370,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             //close the dialog
             closeModalDialog();
+
+            addStudentsRowIDs = [] //clear the list so more items can be added
 
             //update the student list
             refresh();
