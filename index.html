@@ -2651,7 +2651,9 @@ endLoadingAnimation();
     
     disablePageScroll()
 
-  
+    //add one row to the add items view
+    updateAddItemsPopupRows(1);
+
     document.getElementById("popup-modal-title").innerHTML = "Add Items View";
     
     document.getElementById("popup-add-items-content").classList.remove("hidden")
@@ -2665,7 +2667,9 @@ endLoadingAnimation();
     
     disablePageScroll()
 
-  
+    //add one row to the add students view
+    updateAddStudentsPopupRows(1);
+    
     document.getElementById("popup-modal-title").innerHTML = "Add Students View";
     
     document.getElementById("popup-add-students-content").classList.remove("hidden")
