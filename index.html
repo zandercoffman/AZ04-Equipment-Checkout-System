@@ -1035,6 +1035,11 @@ This provides details like student names, usernames, and possibly guardian permi
               </th>
               <th
                 class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                id="items-header-makemodel">
+                Make/Model
+              </th>
+              <th
+                class="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
                 id="items-header-assetTagNumber">
                 Asset Tag Number
               </th>
@@ -1170,7 +1175,7 @@ This provides details like student names, usernames, and possibly guardian permi
          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus">
         <path d="M5 12h14"/><path d="M12 5v14"/>
     </svg>
-    Add Items
+    Add Rental
 </button>
 
             </div>
@@ -1547,10 +1552,20 @@ document.addEventListener('DOMContentLoaded', () => {
   `;
 }
 
+let refreshRunning = false;
 
   function refresh() {
 
+console.log("refresh 1");
+
+  // Prevent function from running multiple times at once
+  if (refreshRunning == true)
+  {
+    return;
+  }
     
+  refreshRunning = true;
+console.log("refresh 2");
     startLoadingAnimation();
 
     setTimeout(() => {
@@ -1583,6 +1598,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fullyLoaded++;
 
         google.script.run.withSuccessHandler((data) => {
+          console.log("refresh 2.5");
           rentals = JSON.parse(data)
           renderRentals(students, rentals)
           fullyLoaded++
@@ -1624,6 +1640,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll(".edit-button").forEach((button) => button.remove())
           }
           endLoadingAnimation();
+          refreshRunning = false;
+          console.log("refresh 3");
           restorePageScroll() //allow scrolling the main page contents again (This might not be necessary anymore 2025-2-25)
           clearInterval(a);
         }
@@ -1632,8 +1650,6 @@ document.addEventListener('DOMContentLoaded', () => {
       
       
     }, 250)
-
-    
     
   }
 
@@ -2903,7 +2919,7 @@ endLoadingAnimation();
     }
   }
   function renderItems(items) {
-
+console.log(items)
     const outputTable = document.getElementById("item-table");
     const tbody = outputTable.querySelector("tbody");
 
@@ -2925,7 +2941,7 @@ endLoadingAnimation();
     const frontendDataset = Object.values(items).map(row => ({
         room: `${row["roomArea"]}`,
         name: `${row["itemDescription"]}`,
-        model: `${row["model"]}`,
+        model: `${row["makeModel"]}`,
         assetTag: `${row["assetTagNumber"]}`,
         status: `${row["status"]}`,
         school: `${row["school"]}`,
@@ -2948,7 +2964,7 @@ endLoadingAnimation();
           `
            // Embed full row in button
     }));
-
+console.log (frontendDataset)
     let rows = []
     
     //document.getElementById("test").innerText = JSON.stringify(frontendDataset).replace(badSVG, "");
@@ -2972,6 +2988,7 @@ endLoadingAnimation();
     rowHTML += `<td class="${cellClasses}">${rowData.room}</td>`;
     rowHTML += `<td class="${cellClasses}">${rowData.name}</td>`;
     rowHTML += `<td class="${cellClasses}">${createSchoolBadge(rowData.school)}</td>`;
+    rowHTML += `<td class="${cellClasses}">${rowData.model}</td>`;
     rowHTML += `<td class="${cellClasses}">${rowData.assetTag}</td>`;
     row.id = rowData.assetTag;
 
@@ -3093,7 +3110,8 @@ endLoadingAnimation();
     }
 
     function renderRentals(students, rentals) {
-      
+      console.log("renderrentals 1");
+      console.log(rentals);
       const outputTable = document.getElementById("rental-table");
       let tbody = outputTable.querySelector("tbody");
       //tbody.innerHTML = ``; 
@@ -3106,7 +3124,7 @@ endLoadingAnimation();
           if (rental.status == "Returned") {
             continue;
           }
-          
+          console.log("printing rental" + id);
           let rentalWithoutDateReturned = {
             rentalID: rental.rentalID,
             itemID: rental.itemID,
@@ -3147,7 +3165,7 @@ endLoadingAnimation();
             </td>
             <td class="p-4" align-middle="" [&:has([role="checkbox])]:pr-0">
               <button class="edit-button" id="edit-button" onclick="openRentalDetails('${btoa(JSON.stringify(Object.values(rentalWithoutDateReturned)))}')" style="width: 40px; height: 40px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"  class="lucide mx-auto lucide-circle-help">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"  class="lucide mx-auto lucide-circle-help">
                   <circle cx="12" cy="12" r="10"></circle>
                   <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
                   <path d="M12 19h.01"></path>
@@ -3163,7 +3181,7 @@ endLoadingAnimation();
       }).getJSON("Items");
 
     
-      
+      console.log("renderrentals 2");
     }
 
 
@@ -3455,7 +3473,7 @@ endLoadingAnimation();
 
 
 
-      refresh() //get an updated copy of the student and item lists
+      //refresh() //get an updated copy of the student and item lists
       
 
     }
